@@ -1,0 +1,188 @@
+@import url('https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Mobile Performance Optimizations */
+@layer base {
+  /* Improve font loading performance */
+  @font-face {
+    font-family: 'Raleway';
+    font-display: swap;
+  }
+
+  @font-face {
+    font-family: 'Inter';
+    font-display: swap;
+  }
+
+  /* Optimize scroll performance on mobile */
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Improve touch responsiveness */
+  button,
+  [role="button"],
+  input,
+  select,
+  textarea {
+    touch-action: manipulation;
+  }
+
+  /* Reduce motion for users who prefer it */
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* High contrast mode support */
+  @media (prefers-contrast: high) {
+    :root {
+      --muted-foreground: 244 47 20;
+      --border: 244 47 30;
+    }
+  }
+
+  /* Optimize for mobile viewport */
+  @supports (-webkit-touch-callout: none) {
+    body {
+      -webkit-text-size-adjust: 100%;
+    }
+  }
+}
+
+@layer base {
+  :root {
+    /* Kasefra Enhanced Purple Theme - Light Mode */
+    --background: 220 13% 98%; /* Softer white background */
+    --foreground: 270 34% 25%; /* Darker Kasefra purple for text */
+    --primary: 270 34% 43%; /* Kasefra purple #6e4993 */
+    --primary-foreground: 0 0% 100%; /* Pure white */
+    --secondary: 270 40% 64%; /* Visible purple for secondary elements */
+    --secondary-foreground: 0 0% 96%; /* White text on secondary */
+    --accent: 220 13% 62%; /* Subtle accent background */
+    --accent-foreground: 270 34% 25%; /* Darker Kasefra purple text */
+    --border: 220 13% 91%; /* Soft border color */
+    --input: 0 0% 100%; /* White input background */
+    --ring: 270 34% 50%; /* Kasefra purple focus ring */
+    --card: 0 0% 100%; /* Pure white cards */
+    --card-foreground: 244 47 15%; /* Deep purple text */
+    --popover: 0 0% 100%; /* White popover */
+    --popover-foreground: 244 47 15%; /* Deep purple text */
+    --muted: 220 13% 95%; /* Light muted background */
+    --muted-foreground: 220 9% 46%; /* Medium grey text */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 76% 36%; /* Rich green */
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%; /* Vibrant amber */
+    --warning-foreground: 0 0% 100%;
+    --radius: 0.75rem; /* Slightly more rounded */
+
+    /* Chart colors aligned with Kasefra theme */
+    --chart-1: 244 47% 50%; /* Primary purple */
+    --chart-2: 142 76% 45%; /* Success green */
+    --chart-3: 38 92% 55%; /* Warning amber */
+    --chart-4: 0 84% 65%; /* Destructive red */
+    --chart-5: 220 13% 70%; /* Muted grey */
+
+    /* Sidebar alignment */
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 270 34% 25%;
+    --sidebar-primary: 270 34% 43%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 13% 95%;
+    --sidebar-accent-foreground: 270 34% 25%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 270 34% 50%;
+  }
+
+  /* Kasefra Enhanced Purple Theme - Dark Mode */
+  .dark {
+    --background: 244 47 8%; /* Deep premium purple background */
+    --foreground: 220 13% 95%; /* Clean white text */
+    --primary: 270 34% 60%; /* Lighter Kasefra purple for dark mode */
+    --primary-foreground: 0 0% 100%; /* Pure white */
+    --secondary: 270 40% 65%; /* Bright visible purple for dark mode */
+    --secondary-foreground: 0 0% 100%; /* Pure white text */
+    --accent: 244 47 65%; /* Premium dark purple accent */
+    --accent-foreground: 220 13% 95%; /* Clean white text */
+    --border: 244 30 25%; /* Elegant purple border */
+    --input: 244 47 12%; /* Deep purple input background */
+    --ring: 244 47 55%; /* Bright purple focus ring */
+    --card: 244 30 12%; /* Lighter card background for better contrast */
+    --card-foreground: 0 0% 98%; /* Brighter white text for better visibility */
+    --popover: 244 30 18%; /* Match card for consistency */
+    --popover-foreground: 0 0% 98%; /* Brighter white text */
+    --muted: 244 30 15%; /* Muted purple background */
+    --muted-foreground: 244 15% 70%; /* Light purple-grey text */
+    --destructive: 0 62.8% 50.6%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 76% 46%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 60%;
+    --warning-foreground: 0 0% 100%;
+
+    /* Chart colors for dark mode */
+    --chart-1: 244 47% 60%; /* Brighter primary purple */
+    --chart-2: 142 76% 55%; /* Brighter success green */
+    --chart-3: 38 92% 65%; /* Brighter warning amber */
+    --chart-4: 0 84% 70%; /* Brighter destructive red */
+    --chart-5: 220 13% 75%; /* Lighter muted grey */
+
+    /* Sidebar alignment for dark mode */
+    --sidebar-background: 244 47 8%;
+    --sidebar-foreground: 220 13% 95%;
+    --sidebar-primary: 270 34% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 244 30 20%;
+    --sidebar-accent-foreground: 220 13% 95%;
+    --sidebar-border: 244 30 25%;
+    --sidebar-ring: 270 34% 65%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Force Kasefra Purple Theme Override */
+@layer components {
+  .sidebar-primary {
+    @apply text-primary bg-primary/10;
+  }
+
+  /* Force sidebar to use Kasefra purple theme */
+  [data-sidebar] {
+    --sidebar-primary: 270 34% 43% !important;
+    --sidebar-ring: 270 34% 50% !important;
+  }
+
+  /* Force all primary colors to Kasefra purple */
+  :root {
+    --primary: 270 34% 43% !important;
+  }
+}
+
+/* Hide scrollbars across all browsers while maintaining scroll functionality */
+* {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+*::-webkit-scrollbar {
+  display: none; /* Safari and Chrome */
+}
