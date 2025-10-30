@@ -2,14 +2,15 @@
 
 /**
  * Dashboard Layout
- * Protected layout with sidebar and header
+ * Protected layout with shadcn sidebar
  */
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/components/providers/auth-provider'
-import AppSidebar from '@/components/dashboard/app-sidebar'
-import SiteHeader from '@/components/dashboard/site-header'
+import { AppSidebar } from '@/components/dashboard/app-sidebar'
+import { SiteHeader } from '@/components/dashboard/site-header'
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar'
 
 export default function DashboardLayout({
   children,
@@ -44,20 +45,14 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      {/* Sidebar */}
+    <SidebarProvider>
       <AppSidebar />
-
-      {/* Main Content */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Header */}
+      <SidebarInset>
         <SiteHeader />
-
-        {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-6">
+        <div className="flex flex-1 flex-col gap-4 p-6">
           {children}
-        </main>
-      </div>
-    </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   )
 }

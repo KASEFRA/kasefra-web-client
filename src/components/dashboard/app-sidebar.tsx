@@ -1,114 +1,226 @@
-'use client'
+"use client"'use client'
 
-/**
- * App Sidebar Component
- * Collapsible sidebar navigation for dashboard
- */
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { useAuth } from '@/components/providers/auth-provider'
-import {
-  Home,
-  CreditCard,
+
+import * as React from "react"/**
+
+import { * App Sidebar Component
+
+  LayoutDashboard, * Collapsible sidebar navigation for dashboard
+
+  Wallet, */
+
+  ArrowRightLeft,
+
+  PieChart,import Link from 'next/link'
+
+  Target,import { usePathname } from 'next/navigation'
+
+  FileText,import { useAuth } from '@/components/providers/auth-provider'
+
+  Settings,import {
+
+  HelpCircle,  Home,
+
+} from "lucide-react"  CreditCard,
+
   ArrowLeftRight,
-  PiggyBank,
-  Target,
-  BarChart3,
-  Settings,
-  ChevronLeft,
-  ChevronRight,
-} from 'lucide-react'
-import { useState } from 'react'
 
-const navigationItems = [
-  {
-    name: 'Dashboard',
-    href: '/dashboard',
+import {  PiggyBank,
+
+  Sidebar,  Target,
+
+  SidebarContent,  BarChart3,
+
+  SidebarFooter,  Settings,
+
+  SidebarHeader,  ChevronLeft,
+
+  SidebarMenu,  ChevronRight,
+
+  SidebarMenuButton,} from 'lucide-react'
+
+  SidebarMenuItem,import { useState } from 'react'
+
+} from "@/components/ui/sidebar"
+
+import { NavMain } from "@/components/dashboard/nav-main"const navigationItems = [
+
+import { NavSecondary } from "@/components/dashboard/nav-secondary"  {
+
+import { NavUser } from "@/components/dashboard/nav-user"    name: 'Dashboard',
+
+import { useAuth } from "@/components/providers/auth-provider"    href: '/dashboard',
+
     icon: Home,
-  },
-  {
-    name: 'Accounts',
-    href: '/dashboard/accounts',
-    icon: CreditCard,
-  },
-  {
-    name: 'Transactions',
-    href: '/dashboard/transactions',
-    icon: ArrowLeftRight,
-  },
-  {
-    name: 'Budgets',
-    href: '/dashboard/budgets',
-    icon: PiggyBank,
-  },
-  {
-    name: 'Goals',
-    href: '/dashboard/goals',
-    icon: Target,
-  },
-  {
-    name: 'Reports',
-    href: '/dashboard/reports',
-    icon: BarChart3,
-  },
-  {
-    name: 'Settings',
-    href: '/dashboard/settings',
+
+const navMainItems = [  },
+
+  {  {
+
+    title: "Dashboard",    name: 'Accounts',
+
+    url: "/dashboard",    href: '/dashboard/accounts',
+
+    icon: LayoutDashboard,    icon: CreditCard,
+
+  },  },
+
+  {  {
+
+    title: "Accounts",    name: 'Transactions',
+
+    url: "/dashboard/accounts",    href: '/dashboard/transactions',
+
+    icon: Wallet,    icon: ArrowLeftRight,
+
+  },  },
+
+  {  {
+
+    title: "Transactions",    name: 'Budgets',
+
+    url: "/dashboard/transactions",    href: '/dashboard/budgets',
+
+    icon: ArrowRightLeft,    icon: PiggyBank,
+
+  },  },
+
+  {  {
+
+    title: "Budgets",    name: 'Goals',
+
+    url: "/dashboard/budgets",    href: '/dashboard/goals',
+
+    icon: PieChart,    icon: Target,
+
+  },  },
+
+  {  {
+
+    title: "Goals",    name: 'Reports',
+
+    url: "/dashboard/goals",    href: '/dashboard/reports',
+
+    icon: Target,    icon: BarChart3,
+
+  },  },
+
+  {  {
+
+    title: "Reports",    name: 'Settings',
+
+    url: "/dashboard/reports",    href: '/dashboard/settings',
+
+    icon: FileText,    icon: Settings,
+
+  },  },
+
+]]
+
+
+
+const navSecondaryItems = [export default function AppSidebar() {
+
+  {  const [collapsed, setCollapsed] = useState(false)
+
+    title: "Settings",  const pathname = usePathname()
+
+    url: "/dashboard/settings",  const { user } = useAuth()
+
     icon: Settings,
-  },
-]
 
-export default function AppSidebar() {
-  const [collapsed, setCollapsed] = useState(false)
-  const pathname = usePathname()
-  const { user } = useAuth()
+  },  return (
 
-  return (
-    <div
-      className={`flex h-screen flex-col border-r border-border bg-card transition-all duration-300 ${
-        collapsed ? 'w-16' : 'w-64'
-      }`}
-    >
-      {/* Logo Section */}
+  {    <div
+
+    title: "Help & Support",      className={`flex h-screen flex-col border-r border-border bg-card transition-all duration-300 ${
+
+    url: "/dashboard/help",        collapsed ? 'w-16' : 'w-64'
+
+    icon: HelpCircle,      }`}
+
+  },    >
+
+]      {/* Logo Section */}
+
       <div className="flex h-16 items-center justify-between border-b border-border px-4">
-        {!collapsed && (
-          <Link href="/dashboard" className="flex items-center space-x-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <span className="text-lg font-bold text-primary-foreground">K</span>
-            </div>
-            <span className="text-lg font-bold text-foreground">Kasefra</span>
-          </Link>
-        )}
-        {collapsed && (
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <span className="text-lg font-bold text-primary-foreground">K</span>
-          </div>
-        )}
-      </div>
 
-      {/* Navigation Items */}
-      <nav className="flex-1 space-y-1 overflow-y-auto p-4">
-        {navigationItems.map((item) => {
-          const Icon = item.icon
-          const isActive = pathname === item.href
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                isActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-              }`}
-              title={collapsed ? item.name : undefined}
-            >
-              <Icon className="h-5 w-5 flex-shrink-0" />
-              {!collapsed && <span>{item.name}</span>}
-            </Link>
-          )
-        })}
-      </nav>
+export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {        {!collapsed && (
+
+  const { user } = useAuth()          <Link href="/dashboard" className="flex items-center space-x-2">
+
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+
+  const userData = {              <span className="text-lg font-bold text-primary-foreground">K</span>
+
+    name: user?.full_name || "User",            </div>
+
+    email: user?.email || "",            <span className="text-lg font-bold text-foreground">Kasefra</span>
+
+    avatar: "/avatars/default.jpg",          </Link>
+
+  }        )}
+
+        {collapsed && (
+
+  return (          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+
+    <Sidebar collapsible="offcanvas" {...props}>            <span className="text-lg font-bold text-primary-foreground">K</span>
+
+      <SidebarHeader>          </div>
+
+        <SidebarMenu>        )}
+
+          <SidebarMenuItem>      </div>
+
+            <SidebarMenuButton size="lg" asChild>
+
+              <a href="/dashboard">      {/* Navigation Items */}
+
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-[#6e4993] text-white">      <nav className="flex-1 space-y-1 overflow-y-auto p-4">
+
+                  <span className="font-bold text-lg">K</span>        {navigationItems.map((item) => {
+
+                </div>          const Icon = item.icon
+
+                <div className="flex flex-col gap-0.5 leading-none">          const isActive = pathname === item.href
+
+                  <span className="font-semibold">Kasefra</span>          return (
+
+                  <span className="text-xs text-muted-foreground">PFM</span>            <Link
+
+                </div>              key={item.href}
+
+              </a>              href={item.href}
+
+            </SidebarMenuButton>              className={`flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+
+          </SidebarMenuItem>                isActive
+
+        </SidebarMenu>                  ? 'bg-primary text-primary-foreground'
+
+      </SidebarHeader>                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+
+      <SidebarContent>              }`}
+
+        <NavMain items={navMainItems} />              title={collapsed ? item.name : undefined}
+
+        <NavSecondary items={navSecondaryItems} className="mt-auto" />            >
+
+      </SidebarContent>              <Icon className="h-5 w-5 flex-shrink-0" />
+
+      <SidebarFooter>              {!collapsed && <span>{item.name}</span>}
+
+        <NavUser user={userData} />            </Link>
+
+      </SidebarFooter>          )
+
+    </Sidebar>        })}
+
+  )      </nav>
+
+}
 
       {/* User Section */}
       <div className="border-t border-border p-4">

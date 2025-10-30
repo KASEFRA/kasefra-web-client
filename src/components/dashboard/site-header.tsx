@@ -1,40 +1,49 @@
-'use client'
+"use client"
 
-/**
- * Site Header Component
- * Top header for dashboard pages
- */
+import { SidebarTrigger } from "@/components/ui/sidebar"
+import { Separator } from "@/components/ui/separator"
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
+import { usePathname } from "next/navigation"
+import React from "react"
 
-import { usePathname } from 'next/navigation'
-import UserNav from './user-nav'
-
-const pageTitles: Record<string, string> = {
-  '/dashboard': 'Dashboard',
-  '/dashboard/accounts': 'Accounts',
-  '/dashboard/transactions': 'Transactions',
-  '/dashboard/budgets': 'Budgets',
-  '/dashboard/goals': 'Goals',
-  '/dashboard/reports': 'Reports',
-  '/dashboard/settings': 'Settings',
-}
-
-export default function SiteHeader() {
+export function SiteHeader() {
   const pathname = usePathname()
-  const pageTitle = pageTitles[pathname] || 'Dashboard'
-
+  
+  const pathSegments = pathname.split("/").filter((segment) => segment !== "")
+  
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
-      <div className="flex h-16 items-center justify-between px-6">
-        {/* Page Title */}
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">{pageTitle}</h1>
-        </div>
+    <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
+      <SidebarTrigger className="-ml-1" />
+      <Separator orientation="vertical" className="mr-2 h-4" />
+      <Breadcrumb>
+        <BreadcrumbList>
+          {pathSegments.map((segment, index) => {
+            const href = `/${pathSegments.slice(0, index + 1).join("/")}`
+            const isLast = index === pathSegments.length - 1
+            const title = segment.charAt(0).toUpperCase() + segment.slice(1)
 
-        {/* Right Section - User Navigation */}
-        <div className="flex items-center space-x-4">
-          <UserNav />
-        </div>
-      </div>
+            return (
+              <React.Fragment key={segment}>
+                <BreadcrumbItem>
+                  {isLast ? (
+                    <BreadcrumbPage>{title}</BreadcrumbPage>
+                  ) : (
+                    <BreadcrumbLink href={href}>{title}</BreadcrumbLink>
+                  )}
+                </BreadcrumbItem>
+                {!isLast && <BreadcrumbSeparator />}
+              </React.Fragment>
+            )
+          })}
+        </BreadcrumbList>
+      </Breadcrumb>
     </header>
   )
 }
