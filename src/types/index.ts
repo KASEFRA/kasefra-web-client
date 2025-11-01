@@ -64,6 +64,25 @@ export enum BillFrequency {
   YEARLY = 'yearly',
 }
 
+export enum GoalType {
+  SAVINGS = 'savings',
+  PURCHASE = 'purchase',
+  DEBT_PAYOFF = 'debt_payoff',
+  INVESTMENT = 'investment',
+  HAJJ = 'hajj',
+  EMERGENCY_FUND = 'emergency_fund',
+  EDUCATION = 'education',
+  RETIREMENT = 'retirement',
+  OTHER = 'other',
+}
+
+export enum GoalStatus {
+  ACTIVE = 'active',
+  COMPLETED = 'completed',
+  PAUSED = 'paused',
+  CANCELLED = 'cancelled',
+}
+
 // ===== ACCOUNT TYPES =====
 
 export interface Account {
@@ -478,6 +497,146 @@ export interface UpcomingBillsResponse {
   bills: RecurringBill[]
   total_amount: number
   count: number
+}
+
+// ===== GOAL TYPES =====
+
+export interface Goal {
+  id: string
+  user_id: string
+  account_id: string | null
+  goal_name: string
+  goal_type: GoalType
+  description: string | null
+  target_amount: number
+  current_amount: number
+  currency: string
+  start_date: string
+  target_date: string
+  status: GoalStatus
+  is_active: boolean
+  monthly_contribution: number | null
+  priority: number
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface GoalCreate {
+  goal_name: string
+  goal_type: GoalType
+  target_amount: number
+  start_date: string
+  target_date: string
+  account_id?: string | null
+  description?: string | null
+  current_amount?: number
+  currency?: string
+  monthly_contribution?: number | null
+  priority?: number
+  notes?: string | null
+}
+
+export interface GoalUpdate {
+  goal_name?: string
+  description?: string | null
+  target_amount?: number
+  current_amount?: number
+  target_date?: string
+  status?: GoalStatus
+  is_active?: boolean
+  monthly_contribution?: number | null
+  priority?: number
+  notes?: string | null
+}
+
+export interface GoalProgress {
+  goal: Goal
+  progress_percentage: number
+  remaining_amount: number
+  days_remaining: number
+  days_elapsed: number
+  required_monthly_contribution: number
+  on_track: boolean
+  projected_completion_date: string | null
+}
+
+export interface GoalSummary {
+  total_goals: number
+  active_goals: number
+  completed_goals: number
+  total_target_amount: number
+  total_current_amount: number
+  overall_progress_percentage: number
+  goals_on_track: number
+  goals_behind_schedule: number
+}
+
+export interface GoalListResponse {
+  goals: Goal[]
+  total_count: number
+}
+
+// ===== NET WORTH TYPES =====
+
+export interface NetWorthSnapshot {
+  id: string
+  user_id: string
+  snapshot_date: string
+  total_assets: number
+  total_liabilities: number
+  net_worth: number
+  breakdown_by_type: Record<string, number> | null
+  liquid_assets: number | null
+  investment_assets: number | null
+  debt_to_income_ratio: number | null
+  created_at: string
+  updated_at: string
+}
+
+export interface NetWorthCurrent {
+  total_assets: number
+  total_liabilities: number
+  net_worth: number
+  breakdown_by_type: Record<string, number>
+  liquid_assets: number
+  investment_assets: number
+  debt_to_income_ratio: number | null
+  as_of_date: string
+}
+
+export interface NetWorthTrend {
+  current_net_worth: number
+  previous_month_net_worth: number | null
+  previous_year_net_worth: number | null
+  month_over_month_change: number | null
+  month_over_month_percentage: number | null
+  year_over_year_change: number | null
+  year_over_year_percentage: number | null
+  trend_data: Array<{
+    date: string
+    net_worth: number
+    total_assets: number
+    total_liabilities: number
+  }>
+}
+
+export interface NetWorthAllocation {
+  total_assets: number
+  allocation_by_type: Array<{
+    account_type: string
+    balance: number
+    percentage: number
+  }>
+}
+
+export interface NetWorthSnapshotCreate {
+  snapshot_date?: string
+}
+
+export interface NetWorthHistoryResponse {
+  snapshots: NetWorthSnapshot[]
+  total_count: number
 }
 
 // ===== COMMON TYPES =====
