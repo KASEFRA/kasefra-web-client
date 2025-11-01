@@ -45,13 +45,13 @@ export default function DashboardLayout({
   }
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={true}>
       <AppSidebar />
-      <SidebarInset>
+      <SidebarInset className="md:ml-64 md:peer-data-[state=collapsed]:ml-[3.25rem]">
         <SiteHeader />
-        <div className="flex flex-1 flex-col gap-4 p-6">
+        <main className="flex-1 p-4 md:p-6 lg:p-8">
           {children}
-        </div>
+        </main>
       </SidebarInset>
     </SidebarProvider>
   )

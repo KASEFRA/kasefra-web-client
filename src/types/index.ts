@@ -598,11 +598,20 @@ export interface NetWorthCurrent {
   total_assets: number
   total_liabilities: number
   net_worth: number
-  breakdown_by_type: Record<string, number>
   liquid_assets: number
   investment_assets: number
-  debt_to_income_ratio: number | null
-  as_of_date: string
+  tangible_assets: number
+
+  // Breakdown by account type
+  breakdown_by_type: Record<string, number>
+
+  // Account counts
+  total_accounts: number
+  asset_accounts: number
+  liability_accounts: number
+
+  // Calculated at
+  calculated_at: string
 }
 
 export interface NetWorthTrend {

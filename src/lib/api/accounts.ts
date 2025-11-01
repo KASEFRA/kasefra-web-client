@@ -72,16 +72,15 @@ export const accountsApi = {
   },
 
   /**
-   * Get account summary/statistics
+   * Get account statistics (count by type, currency, etc.)
    */
-  async getSummary(): Promise<{
-    total_balance: number
-    total_assets: number
-    total_liabilities: number
-    net_worth: number
-    accounts_count: number
+  async getStats(): Promise<{
+    total_accounts: number
+    active_accounts: number
+    by_type: Record<string, number>
+    by_currency: Record<string, number>
   }> {
-    const response = await apiClient.get('/accounts/summary')
+    const response = await apiClient.get('/accounts/stats')
     return response.data
   },
 }
