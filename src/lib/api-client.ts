@@ -1,37 +1,69 @@
 /**
- * Axios API Client with interceptors for authentication and token refresh
+ * Centralized API client with Axios
+ * Handles authentication, token management, and error handling
  */
 
-import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios'
-import { getAccessToken, getRefreshToken, setTokens, clearTokens } from '@/lib/auth/session'
+import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosError } from 'axios'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-const API_VERSION = process.env.NEXT_PUBLIC_API_VERSION || 'v1'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+const API_V1_PREFIX = '/api/v1'
 
-// Create axios instance
-export const apiClient = axios.create({
-  baseURL: `${API_URL}/api/${API_VERSION}`,
-  timeout: 30000, // 30 seconds
+// Token management
+const TOKEN_KEY = 'access_token'
+const REFRESH_TOKEN_KEY = 'refresh_token'
+
+export const getAccessToken = (): string | null => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem(TOKEN_KEY)
+  }
+  return null
+}
+
+export const getRefreshToken = (): string | null => {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem(REFRESH_TOKEN_KEY)
+  }
+  return null
+}
+
+export const setTokens = (accessToken: string, refreshToken: string): void => {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(TOKEN_KEY, accessToken)
+    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken)
+  }
+}
+
+export const clearTokens = (): void => {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(TOKEN_KEY)
+    localStorage.removeItem(REFRESH_TOKEN_KEY)
+  }
+}
+
+// Create Axios instance
+const apiClient: AxiosInstance = axios.create({
+  baseURL: `${API_BASE_URL}${API_V1_PREFIX}`,
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 30000, // 30 seconds
 })
 
-// Request interceptor - Add auth token to requests
+// Request interceptor - Add auth token
 apiClient.interceptors.request.use(
-  (config) => {
+  (config: InternalAxiosRequestConfig) => {
     const token = getAccessToken()
-    if (token) {
+    if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`
     }
     return config
   },
-  (error) => {
+  (error: AxiosError) => {
     return Promise.reject(error)
   }
 )
 
-// Token refresh state
+// Response interceptor - Handle token refresh
 let isRefreshing = false
 let failedQueue: Array<{
   resolve: (value?: unknown) => void
@@ -49,7 +81,6 @@ const processQueue = (error: AxiosError | null, token: string | null = null) => 
   failedQueue = []
 }
 
-// Response interceptor - Handle 401 errors and token refresh
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
@@ -91,7 +122,7 @@ apiClient.interceptors.response.use(
 
       try {
         // Refresh the token
-        const response = await axios.post(`${API_URL}/api/${API_VERSION}/auth/refresh`, {
+        const response = await axios.post(`${API_BASE_URL}${API_V1_PREFIX}/auth/refresh`, {
           refresh_token: refreshToken,
         })
 
@@ -120,3 +151,5 @@ apiClient.interceptors.response.use(
     return Promise.reject(error)
   }
 )
+
+export default apiClient

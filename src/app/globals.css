@@ -1,232 +1,149 @@
-@import url('https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
-@custom-variant dark (&:is(.dark *));
+@import url('https://fonts.googleapis.com/css2?family=Geist+Sans:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Mobile Performance Optimizations */
-@layer base {
-  /* Improve font loading performance */
-  @font-face {
-    font-family: 'Raleway';
-    font-display: swap;
-  }
-
-  @font-face {
-    font-family: 'Inter';
-    font-display: swap;
-  }
-
-  /* Optimize scroll performance on mobile */
-  * {
-    -webkit-overflow-scrolling: touch;
-  }
-
-  /* Improve touch responsiveness */
-  button,
-  [role="button"],
-  input,
-  select,
-  textarea {
-    touch-action: manipulation;
-  }
-
-  /* Reduce motion for users who prefer it */
-  @media (prefers-reduced-motion: reduce) {
-    * {
-      animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
-      scroll-behavior: auto !important;
-    }
-  }
-
-  /* High contrast mode support */
-  @media (prefers-contrast: high) {
-    :root {
-      --muted-foreground: 244 47 20;
-      --border: 244 47 30;
-    }
-  }
-
-  /* Optimize for mobile viewport */
-  @supports (-webkit-touch-callout: none) {
-    body {
-      -webkit-text-size-adjust: 100%;
-    }
-  }
-}
-
 @layer base {
   :root {
-    /* Kasefra Enhanced Purple Theme - Light Mode */
-    --background: 220 13% 98%; /* Softer white background */
-    --foreground: 270 34% 25%; /* Darker Kasefra purple for text */
-    --primary: 270 34% 43%; /* Kasefra purple #6e4993 */
-    --primary-foreground: 0 0% 100%; /* Pure white */
-    --secondary: 270 40% 64%; /* Visible purple for secondary elements */
-    --secondary-foreground: 0 0% 96%; /* White text on secondary */
-    --accent: 220 13% 62%; /* Subtle accent background */
-    --accent-foreground: 270 34% 25%; /* Darker Kasefra purple text */
-    --border: 220 13% 91%; /* Soft border color */
-    --input: 0 0% 100%; /* White input background */
-    --ring: 270 34% 50%; /* Kasefra purple focus ring */
-    --card: 0 0% 100%; /* Pure white cards */
-    --card-foreground: 244 47 15%; /* Deep purple text */
-    --popover: 0 0% 100%; /* White popover */
-    --popover-foreground: 244 47 15%; /* Deep purple text */
-    --muted: 220 13% 95%; /* Light muted background */
-    --muted-foreground: 220 9% 46%; /* Medium grey text */
+    /* Kasefra Royal Purple Theme - Light Mode */
+    --background: 0 0% 100%;
+    --foreground: 270 45% 15%;
+    
+    --primary: 270 45% 43%; /* Kasefra Royal Purple #6e4993 */
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 270 35% 92%;
+    --secondary-foreground: 270 45% 25%;
+    
+    --accent: 270 40% 96%;
+    --accent-foreground: 270 45% 30%;
+    
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 4% 46%;
+    
+    --card: 0 0% 100%;
+    --card-foreground: 270 45% 15%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 270 45% 15%;
+    
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 270 45% 43%;
+    
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --success: 142 76% 36%; /* Rich green */
-    --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%; /* Vibrant amber */
+    
+    --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
-    --radius: 0.75rem; /* Slightly more rounded */
+    
+    --radius: 0.5rem;
 
-    /* Chart colors aligned with Kasefra theme */
-    --chart-1: 244 47% 50%; /* Primary purple */
-    --chart-2: 142 76% 45%; /* Success green */
-    --chart-3: 38 92% 55%; /* Warning amber */
-    --chart-4: 0 84% 65%; /* Destructive red */
-    --chart-5: 220 13% 70%; /* Muted grey */
+    /* Chart colors */
+    --chart-1: 270 45% 43%;
+    --chart-2: 142 76% 45%;
+    --chart-3: 38 92% 55%;
+    --chart-4: 0 84% 65%;
+    --chart-5: 210 40% 60%;
 
-    /* Sidebar alignment */
+    /* Sidebar */
     --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 270 34% 25%;
-    --sidebar-primary: 270 34% 43%;
+    --sidebar-foreground: 270 45% 25%;
+    --sidebar-primary: 270 45% 43%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 13% 95%;
-    --sidebar-accent-foreground: 270 34% 25%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 270 34% 50%;
+    --sidebar-accent: 270 40% 96%;
+    --sidebar-accent-foreground: 270 45% 25%;
+    --sidebar-border: 240 6% 90%;
+    --sidebar-ring: 270 45% 43%;
   }
 
-  /* Kasefra Enhanced Purple Theme - Dark Mode */
   .dark {
-    --background: 244 47 8%; /* Deep premium purple background */
-    --foreground: 220 13% 95%; /* Clean white text */
-    --primary: 270 34% 60%; /* Lighter Kasefra purple for dark mode */
-    --primary-foreground: 0 0% 100%; /* Pure white */
-    --secondary: 270 40% 65%; /* Bright visible purple for dark mode */
-    --secondary-foreground: 0 0% 100%; /* Pure white text */
-    --accent: 244 47 65%; /* Premium dark purple accent */
-    --accent-foreground: 220 13% 95%; /* Clean white text */
-    --border: 244 30 25%; /* Elegant purple border */
-    --input: 244 47 12%; /* Deep purple input background */
-    --ring: 244 47 55%; /* Bright purple focus ring */
-    --card: 244 30 12%; /* Lighter card background for better contrast */
-    --card-foreground: 0 0% 98%; /* Brighter white text for better visibility */
-    --popover: 244 30 18%; /* Match card for consistency */
-    --popover-foreground: 0 0% 98%; /* Brighter white text */
-    --muted: 244 30 15%; /* Muted purple background */
-    --muted-foreground: 244 15% 70%; /* Light purple-grey text */
-    --destructive: 0 62.8% 50.6%;
-    --destructive-foreground: 0 0% 100%;
-    --success: 142 76% 46%;
-    --success-foreground: 0 0% 100%;
-    --warning: 38 92% 60%;
-    --warning-foreground: 0 0% 100%;
+    /* Kasefra Royal Purple Theme - Dark Mode */
+    --background: 270 30% 8%;
+    --foreground: 0 0% 98%;
+    
+    --primary: 270 50% 55%;
+    --primary-foreground: 270 30% 10%;
+    
+    --secondary: 270 30% 20%;
+    --secondary-foreground: 270 20% 90%;
+    
+    --accent: 270 25% 15%;
+    --accent-foreground: 270 20% 90%;
+    
+    --muted: 240 10% 15%;
+    --muted-foreground: 240 5% 65%;
+    
+    --card: 270 25% 10%;
+    --card-foreground: 0 0% 98%;
+    
+    --popover: 270 30% 8%;
+    --popover-foreground: 0 0% 98%;
+    
+    --border: 270 20% 20%;
+    --input: 270 20% 20%;
+    --ring: 270 50% 55%;
+    
+    --success: 142 76% 40%;
+    --success-foreground: 142 90% 98%;
+    
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 98%;
+    
+    --warning: 38 92% 55%;
+    --warning-foreground: 38 95% 98%;
 
-    /* Chart colors for dark mode */
-    --chart-1: 244 47% 60%; /* Brighter primary purple */
-    --chart-2: 142 76% 55%; /* Brighter success green */
-    --chart-3: 38 92% 65%; /* Brighter warning amber */
-    --chart-4: 0 84% 70%; /* Brighter destructive red */
-    --chart-5: 220 13% 75%; /* Lighter muted grey */
+    /* Chart colors */
+    --chart-1: 270 50% 60%;
+    --chart-2: 142 76% 50%;
+    --chart-3: 38 92% 60%;
+    --chart-4: 0 72% 60%;
+    --chart-5: 210 40% 65%;
 
-    /* Sidebar alignment for dark mode */
-    --sidebar-background: 244 47 8%;
-    --sidebar-foreground: 220 13% 95%;
-    --sidebar-primary: 270 34% 60%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 244 30 20%;
-    --sidebar-accent-foreground: 220 13% 95%;
-    --sidebar-border: 244 30 25%;
-    --sidebar-ring: 270 34% 65%;
+    /* Sidebar */
+    --sidebar-background: 270 30% 6%;
+    --sidebar-foreground: 0 0% 90%;
+    --sidebar-primary: 270 50% 55%;
+    --sidebar-primary-foreground: 270 30% 10%;
+    --sidebar-accent: 270 25% 12%;
+    --sidebar-accent-foreground: 0 0% 90%;
+    --sidebar-border: 270 20% 18%;
+    --sidebar-ring: 270 50% 55%;
   }
-}
 
-@layer base {
   * {
     @apply border-border;
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Geist Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  code, pre {
+    font-family: 'Geist Mono', 'SF Mono', Monaco, 'Cascadia Code', Consolas, monospace;
   }
 }
 
-/* Force Kasefra Purple Theme Override */
-@layer components {
-  .sidebar-primary {
-    @apply text-primary bg-primary/10;
-  }
-
-  /* Force sidebar to use Kasefra purple theme */
-  [data-sidebar] {
-    --sidebar-primary: 270 34% 43% !important;
-    --sidebar-ring: 270 34% 50% !important;
-  }
-
-  /* Force all primary colors to Kasefra purple */
-  :root {
-    --primary: 270 34% 43% !important;
-  }
-}
-
-/* Hide scrollbars across all browsers while maintaining scroll functionality */
+/* Hide scrollbars */
 * {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* Internet Explorer 10+ */
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 *::-webkit-scrollbar {
-  display: none; /* Safari and Chrome */
+  display: none;
 }
 
-:root {
-  --sidebar: hsl(0 0% 98%);
-  --sidebar-foreground: hsl(240 5.3% 26.1%);
-  --sidebar-primary: hsl(240 5.9% 10%);
-  --sidebar-primary-foreground: hsl(0 0% 98%);
-  --sidebar-accent: hsl(240 4.8% 95.9%);
-  --sidebar-accent-foreground: hsl(240 5.9% 10%);
-  --sidebar-border: hsl(220 13% 91%);
-  --sidebar-ring: hsl(217.2 91.2% 59.8%);
-}
-
-.dark {
-  --sidebar: hsl(240 5.9% 10%);
-  --sidebar-foreground: hsl(240 4.8% 95.9%);
-  --sidebar-primary: hsl(224.3 76.3% 48%);
-  --sidebar-primary-foreground: hsl(0 0% 100%);
-  --sidebar-accent: hsl(240 3.7% 15.9%);
-  --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
-  --sidebar-border: hsl(240 3.7% 15.9%);
-  --sidebar-ring: hsl(217.2 91.2% 59.8%);
-}
-
-@theme inline {
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
-}
-
-@layer base {
+/* Performance */
+@media (prefers-reduced-motion: reduce) {
   * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }

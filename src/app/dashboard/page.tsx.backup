@@ -2,64 +2,13 @@
 
 /**
  * Dashboard Home Page
- * Main dashboard overview page with real API data
+ * Main dashboard overview page
  */
 
-import { useEffect, useState } from 'react'
 import { useAuth } from '@/components/providers/auth-provider'
-import { accountsApi, budgetsApi } from '@/lib/api'
 
 export default function DashboardPage() {
   const { user } = useAuth()
-  const [loading, setLoading] = useState(true)
-  const [stats, setStats] = useState({
-    totalBalance: 0,
-    totalAssets: 0,
-    totalLiabilities: 0,
-    netWorth: 0,
-    accountsCount: 0,
-  })
-
-  useEffect(() => {
-    loadDashboardData()
-  }, [])
-
-  const loadDashboardData = async () => {
-    try {
-      // Fetch account summary
-      const summary = await accountsApi.getSummary()
-      setStats({
-        totalBalance: summary.total_balance,
-        totalAssets: summary.total_assets,
-        totalLiabilities: summary.total_liabilities,
-        netWorth: summary.net_worth,
-        accountsCount: summary.accounts_count,
-      })
-    } catch (error) {
-      console.error('Failed to load dashboard data:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-AE', {
-      style: 'currency',
-      currency: 'AED',
-      minimumFractionDigits: 2,
-    }).format(amount)
-  }
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-          <p className="mt-2 text-sm text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="space-y-6">
@@ -95,19 +44,17 @@ export default function DashboardPage() {
               />
             </svg>
           </div>
-          <p className="mt-2 text-3xl font-bold text-foreground">
-            {formatCurrency(stats.totalBalance)}
-          </p>
+          <p className="mt-2 text-3xl font-bold text-foreground">AED 0.00</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            {stats.accountsCount} {stats.accountsCount === 1 ? 'account' : 'accounts'} connected
+            No accounts connected yet
           </p>
         </div>
 
-        {/* Total Assets Card */}
+        {/* Income Card */}
         <div className="rounded-lg border border-border bg-card p-6">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium text-muted-foreground">
-              Total Assets
+              This Month Income
             </p>
             <svg
               className="h-4 w-4 text-green-500"
@@ -123,19 +70,17 @@ export default function DashboardPage() {
               />
             </svg>
           </div>
-          <p className="mt-2 text-3xl font-bold text-foreground">
-            {formatCurrency(stats.totalAssets)}
-          </p>
-          <p className="mt-1 text-xs text-green-600">
-            Asset holdings
+          <p className="mt-2 text-3xl font-bold text-foreground">AED 0.00</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            +0% from last month
           </p>
         </div>
 
-        {/* Total Liabilities Card */}
+        {/* Expenses Card */}
         <div className="rounded-lg border border-border bg-card p-6">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium text-muted-foreground">
-              Total Liabilities
+              This Month Expenses
             </p>
             <svg
               className="h-4 w-4 text-red-500"
@@ -151,19 +96,17 @@ export default function DashboardPage() {
               />
             </svg>
           </div>
-          <p className="mt-2 text-3xl font-bold text-foreground">
-            {formatCurrency(stats.totalLiabilities)}
-          </p>
-          <p className="mt-1 text-xs text-red-600">
-            Outstanding debts
+          <p className="mt-2 text-3xl font-bold text-foreground">AED 0.00</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            +0% from last month
           </p>
         </div>
 
-        {/* Net Worth Card */}
+        {/* Savings Card */}
         <div className="rounded-lg border border-border bg-card p-6">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium text-muted-foreground">
-              Net Worth
+              Total Savings
             </p>
             <svg
               className="h-4 w-4 text-primary"
@@ -179,11 +122,9 @@ export default function DashboardPage() {
               />
             </svg>
           </div>
-          <p className="mt-2 text-3xl font-bold text-foreground">
-            {formatCurrency(stats.netWorth)}
-          </p>
+          <p className="mt-2 text-3xl font-bold text-foreground">AED 0.00</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Assets - Liabilities
+            0 active goals
           </p>
         </div>
       </div>
@@ -192,10 +133,7 @@ export default function DashboardPage() {
       <div className="rounded-lg border border-border bg-card p-6">
         <h3 className="text-lg font-semibold text-foreground">Quick Actions</h3>
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <button
-            onClick={() => (window.location.href = '/dashboard/accounts')}
-            className="flex items-center space-x-3 rounded-lg border border-border bg-background p-4 text-left transition-colors hover:bg-accent"
-          >
+          <button className="flex items-center space-x-3 rounded-lg border border-border bg-background p-4 text-left transition-colors hover:bg-accent">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
               <svg
                 className="h-5 w-5 text-primary"
@@ -217,10 +155,7 @@ export default function DashboardPage() {
             </div>
           </button>
 
-          <button
-            onClick={() => (window.location.href = '/dashboard/transactions')}
-            className="flex items-center space-x-3 rounded-lg border border-border bg-background p-4 text-left transition-colors hover:bg-accent"
-          >
+          <button className="flex items-center space-x-3 rounded-lg border border-border bg-background p-4 text-left transition-colors hover:bg-accent">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
               <svg
                 className="h-5 w-5 text-primary"
@@ -242,10 +177,7 @@ export default function DashboardPage() {
             </div>
           </button>
 
-          <button
-            onClick={() => (window.location.href = '/dashboard/budgets')}
-            className="flex items-center space-x-3 rounded-lg border border-border bg-background p-4 text-left transition-colors hover:bg-accent"
-          >
+          <button className="flex items-center space-x-3 rounded-lg border border-border bg-background p-4 text-left transition-colors hover:bg-accent">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
               <svg
                 className="h-5 w-5 text-primary"
@@ -267,10 +199,7 @@ export default function DashboardPage() {
             </div>
           </button>
 
-          <button
-            onClick={() => (window.location.href = '/dashboard/categories')}
-            className="flex items-center space-x-3 rounded-lg border border-border bg-background p-4 text-left transition-colors hover:bg-accent"
-          >
+          <button className="flex items-center space-x-3 rounded-lg border border-border bg-background p-4 text-left transition-colors hover:bg-accent">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
               <svg
                 className="h-5 w-5 text-primary"
@@ -287,8 +216,8 @@ export default function DashboardPage() {
               </svg>
             </div>
             <div>
-              <p className="text-sm font-medium text-foreground">Manage Categories</p>
-              <p className="text-xs text-muted-foreground">Organize spending</p>
+              <p className="text-sm font-medium text-foreground">Set Goal</p>
+              <p className="text-xs text-muted-foreground">Plan savings</p>
             </div>
           </button>
         </div>
