@@ -6,8 +6,9 @@
  */
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { accountsApi, investmentsApi } from '@/lib/api'
-import type { Account } from '@/types'
+import { Account } from '@/types'
 import { AccountType } from '@/types'
 import { Plus, Eye, Edit, Trash2, TrendingUp, TrendingDown, DollarSign } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -15,6 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 
 export default function InvestmentsPage() {
+  const router = useRouter()
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -91,7 +93,7 @@ export default function InvestmentsPage() {
             Manage your investment portfolio and track performance
           </p>
         </div>
-        <Button>
+        <Button onClick={() => router.push('/dashboard/accounts/add?type=investment')}>
           <Plus className="h-4 w-4 mr-2" />
           Add Investment Account
         </Button>

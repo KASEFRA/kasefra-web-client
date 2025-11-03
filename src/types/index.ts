@@ -8,18 +8,24 @@ export * from './auth'
 // ===== ENUMS =====
 
 export enum AccountType {
+  // Liquid accounts
   CHECKING = 'checking',
   SAVINGS = 'savings',
   CREDIT_CARD = 'credit_card',
-  INVESTMENT = 'investment',
-  CRYPTO = 'crypto',
-  ASSET = 'asset',
-  LOAN = 'loan',
-  MORTGAGE = 'mortgage',
-  LINE_OF_CREDIT = 'line_of_credit',
   CASH = 'cash',
+  // Investment accounts
+  INVESTMENT = 'investment',
   BROKERAGE = 'brokerage',
   RETIREMENT = 'retirement',
+  // Crypto
+  CRYPTO = 'crypto',
+  // Assets
+  REAL_ESTATE = 'real_estate',
+  VEHICLE = 'vehicle',
+  OTHER_ASSET = 'other_asset',
+  // Liabilities
+  LOAN = 'loan',
+  MORTGAGE = 'mortgage',
 }
 
 export enum AccountSubtype {
@@ -104,16 +110,20 @@ export interface Account {
 }
 
 export interface AccountCreate {
-  account_name: string
   account_type: AccountType
-  account_subtype?: AccountSubtype | null
+  account_name: string
+  institution_name?: string | null
   currency?: string
+  // Balance fields - critical for net worth
   current_balance?: number
   available_balance?: number | null
   credit_limit?: number | null
-  institution_name?: string | null
-  account_number_last4?: string | null
+  // Bank-specific fields
+  bank_identifier?: string | null
+  account_number_masked?: string | null
+  routing_number?: string | null
   notes?: string | null
+  icon_color?: string | null
 }
 
 export interface AccountUpdate {

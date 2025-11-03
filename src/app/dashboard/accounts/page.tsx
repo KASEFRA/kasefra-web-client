@@ -6,12 +6,14 @@
  */
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { accountsApi } from '@/lib/api'
 import type { Account, AccountType } from '@/types'
 import { Plus, Edit, Trash2, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export default function AccountsPage() {
+  const router = useRouter()
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<string>('all')
@@ -88,7 +90,7 @@ export default function AccountsPage() {
             Manage all your financial accounts
           </p>
         </div>
-        <Button onClick={() => window.location.href = '/dashboard/accounts/new'}>
+        <Button onClick={() => router.push('/dashboard/accounts/add')}>
           <Plus className="mr-2 h-4 w-4" />
           Add Account
         </Button>

@@ -2,19 +2,21 @@
 
 /**
  * Assets Page
- * Manage physical assets
+ * Manage physical assets (real estate, vehicles, etc.)
  */
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { accountsApi, assetsApi } from '@/lib/api'
 import type { Account } from '@/types'
 import { AccountType } from '@/types'
-import { Plus, Eye, Edit, Trash2, Home, Car, Gem } from 'lucide-react'
+import { Plus, Eye, Edit, Trash2, Home, Car, Package } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 
 export default function AssetsPage() {
+  const router = useRouter()
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -27,7 +29,9 @@ export default function AssetsPage() {
       setLoading(true)
       const response = await accountsApi.getAll()
       const assetAccounts = response.accounts.filter(acc =>
-        acc.account_type === AccountType.ASSET
+        acc.account_type === AccountType.REAL_ESTATE ||
+        acc.account_type === AccountType.VEHICLE ||
+        acc.account_type === AccountType.OTHER_ASSET
       )
       setAccounts(assetAccounts)
     } catch (error) {
@@ -81,7 +85,7 @@ export default function AssetsPage() {
             Track real estate, vehicles, and other valuable assets
           </p>
         </div>
-        <Button>
+        <Button onClick={() => router.push('/dashboard/accounts/add?type=asset')}>
           <Plus className="h-4 w-4 mr-2" />
           Add Asset
         </Button>
@@ -120,7 +124,7 @@ export default function AssetsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Other Assets</CardTitle>
-            <Gem className="h-4 w-4 text-muted-foreground" />
+            <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">

@@ -1,20 +1,22 @@
 'use client'
 
 /**
- * Crypto Page
- * Manage cryptocurrency holdings
+ * Crypto Accounts Page
+ * Manage cryptocurrency wallets and holdings
  */
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { accountsApi, cryptoApi } from '@/lib/api'
 import type { Account } from '@/types'
 import { AccountType } from '@/types'
-import { Plus, Eye, Edit, Trash2, Bitcoin, TrendingUp } from 'lucide-react'
+import { Plus, Eye, Edit, Trash2, Bitcoin, TrendingUp, TrendingDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 
-export default function CryptoPage() {
+export default function CryptoAccountsPage() {
+  const router = useRouter()
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -81,7 +83,7 @@ export default function CryptoPage() {
             Track your cryptocurrency portfolio and holdings
           </p>
         </div>
-        <Button>
+        <Button onClick={() => router.push('/dashboard/accounts/add?type=crypto')}>
           <Plus className="h-4 w-4 mr-2" />
           Add Crypto Account
         </Button>

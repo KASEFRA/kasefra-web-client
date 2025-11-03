@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { accountsApi, bankApi } from '@/lib/api'
 import type { Account } from '@/types'
 import { AccountType } from '@/types'
@@ -15,6 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 
 export default function BankAccountsPage() {
+  const router = useRouter()
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -114,7 +116,7 @@ export default function BankAccountsPage() {
             Manage your checking, savings, and credit card accounts
           </p>
         </div>
-        <Button>
+        <Button onClick={() => router.push('/dashboard/accounts/add?type=bank')}>
           <Plus className="h-4 w-4 mr-2" />
           Add Bank Account
         </Button>
