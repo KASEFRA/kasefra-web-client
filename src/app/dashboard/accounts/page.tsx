@@ -8,6 +8,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { accountsApi } from '@/lib/api'
+import { formatCurrency } from '@/lib/currency'
 import type { Account, AccountType } from '@/types'
 import { Plus, Edit, Trash2, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -34,14 +35,6 @@ export default function AccountsPage() {
     } finally {
       setLoading(false)
     }
-  }
-
-  const formatCurrency = (amount: number, currency: string = 'AED') => {
-    return new Intl.NumberFormat('en-AE', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 2,
-    }).format(amount)
   }
 
   const getAccountTypeLabel = (type: AccountType) => {
@@ -212,7 +205,7 @@ export default function AccountsPage() {
               {account.institution_name && (
                 <p className="mt-2 text-sm text-muted-foreground">
                   {account.institution_name}
-                  {account.account_number_last4 && ` ****${account.account_number_last4}`}
+                  {account.account_number_masked && ` ${account.account_number_masked}`}
                 </p>
               )}
 
@@ -221,7 +214,7 @@ export default function AccountsPage() {
                 <div>
                   <p className="text-sm text-muted-foreground">Current Balance</p>
                   <p className="text-2xl font-bold text-foreground">
-                    {formatCurrency(account.current_balance, account.currency)}
+                    {formatCurrency(account.current_balance, account.currency as 'AED' | 'USD')}
                   </p>
                 </div>
 
@@ -229,7 +222,7 @@ export default function AccountsPage() {
                   <div>
                     <p className="text-sm text-muted-foreground">Available Balance</p>
                     <p className="text-lg font-semibold text-foreground">
-                      {formatCurrency(account.available_balance, account.currency)}
+                      {formatCurrency(account.available_balance, account.currency as 'AED' | 'USD')}
                     </p>
                   </div>
                 )}
@@ -238,7 +231,7 @@ export default function AccountsPage() {
                   <div>
                     <p className="text-sm text-muted-foreground">Credit Limit</p>
                     <p className="text-lg font-semibold text-foreground">
-                      {formatCurrency(account.credit_limit, account.currency)}
+                      {formatCurrency(account.credit_limit, account.currency as 'AED' | 'USD')}
                     </p>
                   </div>
                 )}

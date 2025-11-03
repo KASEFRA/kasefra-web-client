@@ -7,6 +7,7 @@
 
 import { useEffect, useState } from 'react'
 import { networthApi } from '@/lib/api'
+import { formatCurrency } from '@/lib/currency'
 import type { NetWorthCurrent, NetWorthTrend, NetWorthAllocation } from '@/types'
 import { TrendingUp, TrendingDown, Wallet, PieChart, Calendar, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -49,15 +50,6 @@ export default function NetWorthPage() {
       console.error('Failed to create snapshot:', error)
       alert('Failed to create snapshot')
     }
-  }
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-AE', {
-      style: 'currency',
-      currency: 'AED',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 0,
-    }).format(amount)
   }
 
   const formatPercentage = (value: number | null) => {
@@ -125,7 +117,7 @@ export default function NetWorthPage() {
                 {formatCurrency(currentNetWorth.net_worth)}
               </h2>
               <p className="mt-1 text-xs text-muted-foreground">
-                As of {new Date(currentNetWorth.as_of_date).toLocaleDateString()}
+                As of {new Date(currentNetWorth.calculated_at).toLocaleDateString()}
               </p>
             </div>
           </div>
@@ -159,7 +151,7 @@ export default function NetWorthPage() {
             <p className="mt-1 text-2xl font-bold text-red-900 dark:text-red-300">
               {formatCurrency(currentNetWorth.total_liabilities)}
             </p>
-            {currentNetWorth.debt_to_income_ratio !== null && (
+            {currentNetWorth.debt_to_income_ratio !== null && currentNetWorth.debt_to_income_ratio !== undefined && (
               <div className="mt-2">
                 <p className="text-xs text-red-700 dark:text-red-400">
                   Debt-to-Income Ratio
@@ -275,7 +267,7 @@ export default function NetWorthPage() {
       )}
 
       {/* Asset Allocation */}
-      {allocation && allocation.allocation_by_type.length > 0 && (
+      {allocation && allocation.allocations.length > 0 && (
         <div className="rounded-lg border border-border bg-card p-6">
           <div className="flex items-center gap-2">
             <PieChart className="h-5 w-5 text-muted-foreground" />
@@ -283,7 +275,7 @@ export default function NetWorthPage() {
           </div>
 
           <div className="mt-4 space-y-3">
-            {allocation.allocation_by_type.map((item) => (
+            {allocation.allocations.map((item) => (
               <div key={item.account_type} className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">

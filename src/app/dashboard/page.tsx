@@ -8,6 +8,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/components/providers/auth-provider'
 import { networthApi } from '@/lib/api'
+import { formatCurrency, BASE_CURRENCY } from '@/lib/currency'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
@@ -53,14 +54,6 @@ export default function DashboardPage() {
     } finally {
       setLoading(false)
     }
-  }
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-AE', {
-      style: 'currency',
-      currency: 'AED',
-      minimumFractionDigits: 2,
-    }).format(amount)
   }
 
   if (loading) {

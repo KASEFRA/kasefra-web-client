@@ -30,16 +30,6 @@ export const accountsApi = {
   },
 
   /**
-   * Get accounts by subtype
-   */
-  async getBySubtype(subtype: string): Promise<AccountListResponse> {
-    const response = await apiClient.get<AccountListResponse>('/accounts', {
-      params: { account_subtype: subtype },
-    })
-    return response.data
-  },
-
-  /**
    * Get single account by ID
    */
   async getById(accountId: string): Promise<Account> {

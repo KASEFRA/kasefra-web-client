@@ -28,13 +28,6 @@ export enum AccountType {
   MORTGAGE = 'mortgage',
 }
 
-export enum AccountSubtype {
-  BANK = 'bank',
-  INVESTMENT = 'investment',
-  CRYPTO = 'crypto',
-  ASSET = 'asset',
-}
-
 export enum TransactionType {
   DEBIT = 'debit',
   CREDIT = 'credit',
@@ -96,15 +89,21 @@ export interface Account {
   user_id: string
   account_name: string
   account_type: AccountType
-  account_subtype: AccountSubtype | null
   currency: string
   current_balance: number
   available_balance: number | null
   credit_limit: number | null
   is_active: boolean
   institution_name: string | null
-  account_number_last4: string | null
+  bank_identifier: string | null
+  account_number_masked: string | null
+  routing_number: string | null
+  lean_account_id: string | null
+  lean_entity_id: string | null
+  last_synced_at: string | null
+  sync_status: string | null
   notes: string | null
+  icon_color: string | null
   created_at: string
   updated_at: string
 }
@@ -128,12 +127,17 @@ export interface AccountCreate {
 
 export interface AccountUpdate {
   account_name?: string
-  current_balance?: number
+  institution_name?: string | null
+  currency?: string | null
+  current_balance?: number | null
   available_balance?: number | null
   credit_limit?: number | null
-  is_active?: boolean
-  institution_name?: string | null
+  bank_identifier?: string | null
+  account_number_masked?: string | null
+  routing_number?: string | null
   notes?: string | null
+  icon_color?: string | null
+  is_active?: boolean
 }
 
 export interface AccountListResponse {
@@ -620,6 +624,9 @@ export interface NetWorthCurrent {
   asset_accounts: number
   liability_accounts: number
 
+  // Optional fields (may not be calculated/available)
+  debt_to_income_ratio?: number | null
+
   // Calculated at
   calculated_at: string
 }
@@ -642,7 +649,7 @@ export interface NetWorthTrend {
 
 export interface NetWorthAllocation {
   total_assets: number
-  allocation_by_type: Array<{
+  allocations: Array<{
     account_type: string
     balance: number
     percentage: number

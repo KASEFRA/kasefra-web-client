@@ -7,6 +7,7 @@
 
 import { useEffect, useState } from 'react'
 import { goalsApi } from '@/lib/api'
+import { formatCurrency } from '@/lib/currency'
 import type { Goal, GoalProgress, GoalSummary, GoalType, GoalStatus } from '@/types'
 import { Plus, Edit, Trash2, Target, TrendingUp, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -70,14 +71,6 @@ export default function GoalsPage() {
       console.error('Failed to delete goal:', error)
       alert('Failed to delete goal')
     }
-  }
-
-  const formatCurrency = (amount: number, currency: string = 'AED') => {
-    return new Intl.NumberFormat('en-AE', {
-      style: 'currency',
-      currency,
-      minimumFractionDigits: 2,
-    }).format(amount)
   }
 
   const formatGoalType = (type: string) => {
@@ -261,19 +254,19 @@ export default function GoalsPage() {
                           <div>
                             <p className="text-xs text-muted-foreground">Current</p>
                             <p className="mt-1 text-lg font-semibold text-foreground">
-                              {formatCurrency(goal.current_amount, goal.currency)}
+                              {formatCurrency(goal.current_amount, goal.currency as 'AED' | 'USD')}
                             </p>
                           </div>
                           <div>
                             <p className="text-xs text-muted-foreground">Target</p>
                             <p className="mt-1 text-lg font-semibold text-foreground">
-                              {formatCurrency(goal.target_amount, goal.currency)}
+                              {formatCurrency(goal.target_amount, goal.currency as 'AED' | 'USD')}
                             </p>
                           </div>
                           <div>
                             <p className="text-xs text-muted-foreground">Remaining</p>
                             <p className="mt-1 text-lg font-semibold text-foreground">
-                              {formatCurrency(progress.remaining_amount, goal.currency)}
+                              {formatCurrency(progress.remaining_amount, goal.currency as 'AED' | 'USD')}
                             </p>
                           </div>
                           <div>
@@ -318,7 +311,7 @@ export default function GoalsPage() {
                               Required monthly contribution to reach goal
                             </p>
                             <p className="mt-1 text-lg font-semibold text-foreground">
-                              {formatCurrency(progress.required_monthly_contribution, goal.currency)}/month
+                              {formatCurrency(progress.required_monthly_contribution, goal.currency as 'AED' | 'USD')}/month
                             </p>
                           </div>
                         )}

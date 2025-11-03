@@ -260,9 +260,6 @@ export default function AddAccountPage() {
                         <SelectContent>
                           <SelectItem value="AED">AED - UAE Dirham</SelectItem>
                           <SelectItem value="USD">USD - US Dollar</SelectItem>
-                          <SelectItem value="EUR">EUR - Euro</SelectItem>
-                          <SelectItem value="GBP">GBP - British Pound</SelectItem>
-                          <SelectItem value="SAR">SAR - Saudi Riyal</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
