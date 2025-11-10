@@ -33,15 +33,12 @@ const ACCOUNT_TYPES = [
   { value: AccountType.SAVINGS, label: 'Savings', icon: PiggyBank, description: 'Save for goals' },
   { value: AccountType.CREDIT_CARD, label: 'Credit Card', icon: CreditCard, description: 'Credit account' },
   { value: AccountType.CASH, label: 'Cash', icon: Wallet, description: 'Physical cash' },
-  { value: AccountType.INVESTMENT, label: 'Investment', icon: TrendingUp, description: 'Stocks & bonds' },
-  { value: AccountType.RETIREMENT, label: 'Retirement', icon: Building, description: '401k, IRA' },
+  { value: AccountType.INVESTMENT, label: 'Investment', icon: TrendingUp, description: 'Stocks, bonds, retirement' },
   { value: AccountType.CRYPTO, label: 'Crypto', icon: Bitcoin, description: 'Digital assets' },
   { value: AccountType.REAL_ESTATE, label: 'Real Estate', icon: Home, description: 'Property' },
-  { value: AccountType.VEHICLE, label: 'Vehicle', icon: Car, description: 'Cars, boats' },
+  { value: AccountType.OTHER_ASSET, label: 'Other Asset', icon: Car, description: 'Vehicles, etc.' },
+  { value: AccountType.LOAN, label: 'Loan', icon: Building, description: 'Loans & mortgages' },
 ]
-
-// Bank account types (show banking fields)
-const BANK_TYPES = [AccountType.CHECKING, AccountType.SAVINGS, AccountType.CREDIT_CARD]
 
 // Color presets
 const COLOR_PRESETS = [
@@ -59,14 +56,8 @@ const formSchema = z.object({
   account_name: z.string().min(1, 'Account name is required').max(255),
   institution_name: z.string().max(255).optional().nullable(),
   currency: z.string().length(3).toUpperCase(),
-  // Balance fields - critical for net worth calculation
-  current_balance: z.number().min(0, 'Balance must be positive or zero'),
-  available_balance: z.number().min(0).optional().nullable(),
-  credit_limit: z.number().min(0).optional().nullable(),
-  // Bank-specific fields
-  bank_identifier: z.string().max(100).optional().nullable(),
+  current_balance: z.number().min(0, 'Balance must be 0 or greater').optional(),
   account_number_masked: z.string().max(50).optional().nullable(),
-  routing_number: z.string().max(50).optional().nullable(),
   notes: z.string().optional().nullable(),
   icon_color: z.string().regex(/^#[0-9A-F]{6}$/i).optional().nullable(),
 })
@@ -87,51 +78,43 @@ export default function AddAccountPage() {
       institution_name: '',
       currency: 'AED',
       current_balance: 0,
-      available_balance: undefined,
-      credit_limit: undefined,
-      bank_identifier: '',
       account_number_masked: '',
-      routing_number: '',
       notes: '',
       icon_color: COLOR_PRESETS[0].value,
     },
   })
 
   const selectedType = form.watch('account_type')
-  const showBankingFields = selectedType && BANK_TYPES.includes(selectedType)
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
       setIsSubmitting(true)
-      
+
       // Clean up empty strings to null
       const payload: AccountCreate = {
         account_type: values.account_type,
         account_name: values.account_name,
         institution_name: values.institution_name || null,
         currency: values.currency || 'AED',
-        current_balance: values.current_balance ?? 0,
-        available_balance: values.available_balance ?? null,
-        credit_limit: values.credit_limit ?? null,
-        bank_identifier: values.bank_identifier || null,
+        current_balance: values.current_balance || 0,
         account_number_masked: values.account_number_masked || null,
-        routing_number: values.routing_number || null,
         notes: values.notes || null,
         icon_color: values.icon_color || null,
       }
 
       await accountsApi.create(payload)
-      
+
       toast.success('Account created successfully!')
-      
+
       // Redirect to appropriate list page
-      if (BANK_TYPES.includes(values.account_type)) {
+      const bankTypes = [AccountType.CHECKING, AccountType.SAVINGS, AccountType.CREDIT_CARD, AccountType.CASH]
+      if (bankTypes.includes(values.account_type)) {
         router.push('/dashboard/accounts/bank')
-      } else if ([AccountType.INVESTMENT, AccountType.RETIREMENT].includes(values.account_type)) {
+      } else if (values.account_type === AccountType.INVESTMENT) {
         router.push('/dashboard/accounts/investments')
       } else if (values.account_type === AccountType.CRYPTO) {
         router.push('/dashboard/accounts/crypto')
-      } else if ([AccountType.REAL_ESTATE, AccountType.VEHICLE, AccountType.OTHER_ASSET].includes(values.account_type)) {
+      } else if ([AccountType.REAL_ESTATE, AccountType.OTHER_ASSET].includes(values.account_type)) {
         router.push('/dashboard/accounts/assets')
       } else {
         router.push('/dashboard')
@@ -259,7 +242,6 @@ export default function AddAccountPage() {
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="AED">AED - UAE Dirham</SelectItem>
-                          <SelectItem value="USD">USD - US Dollar</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -274,10 +256,10 @@ export default function AddAccountPage() {
                     <FormItem>
                       <FormLabel>Current Balance / Value *</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
+                        <Input
+                          type="number"
                           step="0.01"
-                          placeholder="0.00" 
+                          placeholder="0.00"
                           value={field.value ?? ''}
                           onChange={(e) => {
                             const value = e.target.value
@@ -292,59 +274,22 @@ export default function AddAccountPage() {
                     </FormItem>
                   )}
                 />
+
+                <FormField
+                  control={form.control}
+                  name="account_number_masked"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Account Number (Optional)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="****1234" {...field} value={field.value || ''} />
+                      </FormControl>
+                      <FormDescription>Last 4 digits or masked format (e.g., ****1234)</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
-
-              {/* Banking Details - Conditional */}
-              {showBankingFields && (
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Banking Details</h3>
-                  
-                  <FormField
-                    control={form.control}
-                    name="bank_identifier"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Bank Identifier</FormLabel>
-                        <FormControl>
-                          <Input placeholder="SWIFT/BIC code" {...field} value={field.value || ''} />
-                        </FormControl>
-                        <FormDescription>SWIFT code, BIC, or routing identifier</FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="account_number_masked"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Account Number</FormLabel>
-                        <FormControl>
-                          <Input placeholder="****1234" {...field} value={field.value || ''} />
-                        </FormControl>
-                        <FormDescription>Last 4 digits or masked format (e.g., ****1234)</FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="routing_number"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Routing Number</FormLabel>
-                        <FormControl>
-                          <Input placeholder="123456789" {...field} value={field.value || ''} />
-                        </FormControl>
-                        <FormDescription>Bank routing number (if applicable)</FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              )}
 
               {/* Customization */}
               <div className="space-y-4">

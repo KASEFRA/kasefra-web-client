@@ -12,32 +12,23 @@ import type {
 
 export const bankApi = {
   /**
-   * Get all transactions for an account
+   * Get all transactions with optional filters
    */
-  async getAll(accountId: string): Promise<BankTransactionListResponse> {
+  async getAll(filters?: {
+    account_id?: string
+    category_id?: string
+    transaction_type?: string
+    status?: string
+    start_date?: string
+    end_date?: string
+    min_amount?: number
+    max_amount?: number
+    search_term?: string
+    skip?: number
+    limit?: number
+  }): Promise<BankTransactionListResponse> {
     const response = await apiClient.get<BankTransactionListResponse>(
-      `/bank/${accountId}/transactions`
-    )
-    return response.data
-  },
-
-  /**
-   * Get transactions with filters
-   */
-  async getFiltered(
-    accountId: string,
-    filters?: {
-      start_date?: string
-      end_date?: string
-      category_id?: string
-      transaction_type?: string
-      min_amount?: number
-      max_amount?: number
-      search?: string
-    }
-  ): Promise<BankTransactionListResponse> {
-    const response = await apiClient.get<BankTransactionListResponse>(
-      `/bank/${accountId}/transactions`,
+      '/accounts/bank/transactions',
       { params: filters }
     )
     return response.data
@@ -46,9 +37,9 @@ export const bankApi = {
   /**
    * Get single transaction by ID
    */
-  async getById(accountId: string, transactionId: string): Promise<BankTransaction> {
+  async getById(transactionId: string): Promise<BankTransaction> {
     const response = await apiClient.get<BankTransaction>(
-      `/bank/${accountId}/transactions/${transactionId}`
+      `/accounts/bank/transactions/${transactionId}`
     )
     return response.data
   },
@@ -56,9 +47,9 @@ export const bankApi = {
   /**
    * Create new transaction
    */
-  async create(accountId: string, transactionData: BankTransactionCreate): Promise<BankTransaction> {
+  async create(transactionData: BankTransactionCreate): Promise<BankTransaction> {
     const response = await apiClient.post<BankTransaction>(
-      `/bank/${accountId}/transactions`,
+      '/accounts/bank/transactions',
       transactionData
     )
     return response.data
@@ -68,12 +59,11 @@ export const bankApi = {
    * Update existing transaction
    */
   async update(
-    accountId: string,
     transactionId: string,
     transactionData: BankTransactionUpdate
   ): Promise<BankTransaction> {
     const response = await apiClient.put<BankTransaction>(
-      `/bank/${accountId}/transactions/${transactionId}`,
+      `/accounts/bank/transactions/${transactionId}`,
       transactionData
     )
     return response.data
@@ -82,25 +72,45 @@ export const bankApi = {
   /**
    * Delete transaction
    */
-  async delete(accountId: string, transactionId: string): Promise<{ message: string }> {
-    const response = await apiClient.delete<{ message: string }>(
-      `/bank/${accountId}/transactions/${transactionId}`
+  async delete(transactionId: string): Promise<{ message: string }> {
+    const response = await apiClient.delete<{ message: string}>(
+      `/accounts/bank/transactions/${transactionId}`
     )
     return response.data
   },
 
   /**
-   * Get transaction summary for account
+   * Get account balance
    */
-  async getSummary(accountId: string, period?: string): Promise<{
+  async getAccountBalance(accountId: string): Promise<{
+    account_id: string
+    current_balance: number
+    currency: string
+    as_of_date: string
+    transaction_count: number
     total_income: number
     total_expenses: number
-    net_cashflow: number
-    transaction_count: number
-    top_categories: Array<{ category: string; amount: number; count: number }>
   }> {
-    const response = await apiClient.get(`/bank/${accountId}/summary`, {
-      params: { period },
+    const response = await apiClient.get(`/accounts/bank/${accountId}/balance`)
+    return response.data
+  },
+
+  /**
+   * Get income/expense summary for account
+   */
+  async getSummary(accountId: string, startDate?: string, endDate?: string): Promise<{
+    account_id: string
+    period: string
+    start_date: string
+    end_date: string
+    total_income: number
+    total_expenses: number
+    net_income: number
+    income_count: number
+    expense_count: number
+  }> {
+    const response = await apiClient.get(`/accounts/bank/${accountId}/summary`, {
+      params: { start_date: startDate, end_date: endDate },
     })
     return response.data
   },

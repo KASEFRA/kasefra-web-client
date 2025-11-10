@@ -1,8 +1,9 @@
 /**
  * Currency utility functions for consistent formatting across the app
+ * Currently only supports AED (UAE Dirham)
  */
 
-export const SUPPORTED_CURRENCIES = ['AED', 'USD'] as const
+export const SUPPORTED_CURRENCIES = ['AED'] as const
 export type SupportedCurrency = typeof SUPPORTED_CURRENCIES[number]
 
 export const BASE_CURRENCY = 'AED' as const
@@ -12,7 +13,6 @@ export const BASE_CURRENCY = 'AED' as const
  */
 export const CURRENCY_SYMBOLS: Record<SupportedCurrency, string> = {
   AED: 'د.إ',
-  USD: '$',
 }
 
 /**
@@ -20,7 +20,6 @@ export const CURRENCY_SYMBOLS: Record<SupportedCurrency, string> = {
  */
 export const CURRENCY_NAMES: Record<SupportedCurrency, string> = {
   AED: 'UAE Dirham',
-  USD: 'US Dollar',
 }
 
 /**
@@ -52,12 +51,11 @@ export function formatCurrency(
  * Format amount with currency symbol only (no full currency name)
  *
  * @param amount - The amount to format
- * @param currency - Currency code (AED or USD)
+ * @param currency - Currency code (AED)
  * @returns Formatted string with symbol
  *
  * @example
  * formatCurrencyCompact(1234.56, 'AED') // "د.إ 1,234.56"
- * formatCurrencyCompact(1234.56, 'USD') // "$1,234.56"
  */
 export function formatCurrencyCompact(
   amount: number,
@@ -69,7 +67,7 @@ export function formatCurrencyCompact(
     maximumFractionDigits: 2,
   }).format(amount)
 
-  return currency === 'USD' ? `${symbol}${formatted}` : `${symbol} ${formatted}`
+  return `${symbol} ${formatted}`
 }
 
 /**
@@ -94,24 +92,16 @@ export function isSupportedCurrency(currency: string): currency is SupportedCurr
 }
 
 /**
- * Format a currency value with a label indicating it's converted to base currency
+ * Format a currency value (all amounts are in AED)
  *
- * @param amount - The amount (already converted to AED)
- * @param originalCurrency - The original currency before conversion
- * @returns Formatted string with conversion indicator
+ * @param amount - The amount in AED
+ * @returns Formatted string
  *
  * @example
- * formatConvertedCurrency(367.25, 'USD') // "AED 367.25 (from USD)"
+ * formatConvertedCurrency(367.25) // "AED 367.25"
  */
-export function formatConvertedCurrency(
-  amount: number,
-  originalCurrency: SupportedCurrency
-): string {
-  if (originalCurrency === BASE_CURRENCY) {
-    return formatCurrency(amount, BASE_CURRENCY)
-  }
-
-  return `${formatCurrency(amount, BASE_CURRENCY)} (from ${originalCurrency})`
+export function formatConvertedCurrency(amount: number): string {
+  return formatCurrency(amount, BASE_CURRENCY)
 }
 
 /**

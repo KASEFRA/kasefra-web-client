@@ -6,12 +6,14 @@
  */
 
 import { useEffect, useState } from 'react'
-import { bankApi, accountsApi } from '@/lib/api'
-import type { BankTransaction, Account } from '@/types'
-import { AccountType, TransactionType } from '@/types'
-import { Plus, Search, Filter, Calendar, ArrowUpDown, Eye, Edit, Trash2 } from 'lucide-react'
+import { bankApi, accountsApi, categoriesApi } from '@/lib/api'
+import type { BankTransaction, Account, Category, BankTransactionCreate, BankTransactionUpdate } from '@/types'
+import { TransactionType, CategoryType } from '@/types'
+import { Plus, Search, Edit, Trash2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Select,
@@ -20,82 +22,177 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
+import { formatCurrency } from '@/lib/currency'
 
 export default function TransactionsPage() {
   const [accounts, setAccounts] = useState<Account[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
   const [transactions, setTransactions] = useState<BankTransaction[]>([])
   const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+
+  // Filters
   const [selectedAccount, setSelectedAccount] = useState<string>('all')
+  const [selectedCategory, setSelectedCategory] = useState<string>('all')
+  const [selectedType, setSelectedType] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
-  const [typeFilter, setTypeFilter] = useState<string>('all')
-  const [sortBy, setSortBy] = useState<'date' | 'amount'>('date')
+
+  // Dialog states
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [editingTransaction, setEditingTransaction] = useState<BankTransaction | null>(null)
+
+  // Form state
+  const [formData, setFormData] = useState<BankTransactionCreate>({
+    account_id: '',
+    category_id: null,
+    amount: 0,
+    transaction_type: TransactionType.DEBIT,
+    description: '',
+    transaction_date: new Date().toISOString().split('T')[0],
+    notes: '',
+  })
 
   useEffect(() => {
-    loadAccounts()
+    loadInitialData()
   }, [])
 
   useEffect(() => {
-    if (accounts.length > 0) {
-      loadTransactions()
-    }
-  }, [selectedAccount, typeFilter, accounts])
+    loadTransactions()
+  }, [selectedAccount, selectedCategory, selectedType])
 
-  const loadAccounts = async () => {
+  const loadInitialData = async () => {
     try {
-      const response = await accountsApi.getAll()
-      const bankAccounts = response.accounts.filter(acc => 
-        acc.account_type === AccountType.CHECKING || 
-        acc.account_type === AccountType.SAVINGS || 
-        acc.account_type === AccountType.CREDIT_CARD
-      )
-      setAccounts(bankAccounts)
+      const [accountsRes, categoriesRes] = await Promise.all([
+        accountsApi.getAll(),
+        categoriesApi.getAll()
+      ])
+      setAccounts(accountsRes.accounts.filter(a => a.is_active))
+      setCategories(categoriesRes.categories)
+
+      // Set default account if available
+      if (accountsRes.accounts.length > 0) {
+        setFormData(prev => ({ ...prev, account_id: accountsRes.accounts[0].id }))
+      }
     } catch (error) {
-      console.error('Failed to load accounts:', error)
+      console.error('Failed to load initial data:', error)
     }
   }
 
   const loadTransactions = async () => {
     try {
       setLoading(true)
-      if (selectedAccount === 'all') {
-        // Load transactions from all accounts
-        const allTransactions: BankTransaction[] = []
-        for (const account of accounts) {
-          const response = await bankApi.getAll(account.id)
-          allTransactions.push(...response.transactions)
-        }
-        setTransactions(allTransactions)
-      } else {
-        const response = await bankApi.getAll(selectedAccount)
-        setTransactions(response.transactions)
-      }
+      const filters: any = {}
+
+      if (selectedAccount !== 'all') filters.account_id = selectedAccount
+      if (selectedCategory !== 'all') filters.category_id = selectedCategory
+      if (selectedType !== 'all') filters.transaction_type = selectedType
+      if (searchQuery) filters.search_term = searchQuery
+
+      const response = await bankApi.getAll(filters)
+      setTransactions(response.transactions || [])
     } catch (error) {
       console.error('Failed to load transactions:', error)
+      setTransactions([])
     } finally {
       setLoading(false)
     }
   }
 
-  const handleDelete = async (accountId: string, transactionId: string) => {
-    if (!confirm('Are you sure you want to delete this transaction?')) {
-      return
-    }
-
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault()
     try {
-      await bankApi.delete(accountId, transactionId)
+      setSubmitting(true)
+      await bankApi.create(formData)
+      setCreateDialogOpen(false)
+      resetForm()
       await loadTransactions()
-    } catch (error) {
-      console.error('Failed to delete transaction:', error)
+    } catch (error: any) {
+      console.error('Failed to create transaction:', error)
+      alert(error.response?.data?.error?.details || 'Failed to create transaction')
+    } finally {
+      setSubmitting(false)
     }
   }
 
-  const formatCurrency = (amount: number, currency: string = 'AED') => {
-    return new Intl.NumberFormat('en-AE', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 2,
-    }).format(amount)
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingTransaction) return
+
+    try {
+      setSubmitting(true)
+      const updateData: BankTransactionUpdate = {
+        category_id: formData.category_id,
+        amount: formData.amount,
+        transaction_type: formData.transaction_type,
+        description: formData.description,
+        transaction_date: formData.transaction_date,
+        notes: formData.notes || null,
+      }
+
+      await bankApi.update(editingTransaction.id, updateData)
+      setEditDialogOpen(false)
+      setEditingTransaction(null)
+      resetForm()
+      await loadTransactions()
+    } catch (error: any) {
+      console.error('Failed to update transaction:', error)
+      alert(error.response?.data?.error?.details || 'Failed to update transaction')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleDelete = async (transactionId: string) => {
+    if (!confirm('Are you sure you want to delete this transaction?')) return
+
+    try {
+      await bankApi.delete(transactionId)
+      await loadTransactions()
+    } catch (error) {
+      console.error('Failed to delete transaction:', error)
+      alert('Failed to delete transaction')
+    }
+  }
+
+  const openCreateDialog = () => {
+    resetForm()
+    setCreateDialogOpen(true)
+  }
+
+  const openEditDialog = (transaction: BankTransaction) => {
+    setEditingTransaction(transaction)
+    setFormData({
+      account_id: transaction.account_id,
+      category_id: transaction.category_id,
+      amount: transaction.amount,
+      transaction_type: transaction.transaction_type,
+      description: transaction.description,
+      transaction_date: transaction.transaction_date,
+      notes: transaction.notes || '',
+    })
+    setEditDialogOpen(true)
+  }
+
+  const resetForm = () => {
+    setFormData({
+      account_id: accounts[0]?.id || '',
+      category_id: null,
+      amount: 0,
+      transaction_type: TransactionType.DEBIT,
+      description: '',
+      transaction_date: new Date().toISOString().split('T')[0],
+      notes: '',
+    })
   }
 
   const formatDate = (dateString: string) => {
@@ -106,52 +203,138 @@ export default function TransactionsPage() {
     })
   }
 
-  const getTransactionTypeColor = (type: string) => {
-    switch (type.toLowerCase()) {
-      case 'income':
-      case 'deposit':
-        return 'bg-green-500/10 text-green-500 border-green-500/20'
-      case 'expense':
-      case 'withdrawal':
-        return 'bg-red-500/10 text-red-500 border-red-500/20'
-      case 'transfer':
-        return 'bg-blue-500/10 text-blue-500 border-blue-500/20'
-      default:
-        return 'bg-gray-500/10 text-gray-500 border-gray-500/20'
+  // Filter categories by transaction type
+  const filteredCategories = categories.filter(cat => {
+    if (!formData.transaction_type) return true
+    if (formData.transaction_type === TransactionType.CREDIT) {
+      return cat.category_type === CategoryType.INCOME
+    } else {
+      return cat.category_type === CategoryType.EXPENSE
     }
-  }
+  })
 
-  // Filter and sort transactions
-  const filteredTransactions = transactions
-    .filter(tx => {
-      // Search filter
-      if (searchQuery && !tx.description?.toLowerCase().includes(searchQuery.toLowerCase())) {
-        return false
-      }
-      // Type filter
-      if (typeFilter !== 'all' && tx.transaction_type !== typeFilter) {
-        return false
-      }
-      return true
-    })
-    .sort((a, b) => {
-      if (sortBy === 'date') {
-        return new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime()
-      } else {
-        return Math.abs(b.amount) - Math.abs(a.amount)
-      }
-    })
+  const TransactionForm = ({ onSubmit, submitLabel }: { onSubmit: (e: React.FormEvent) => void, submitLabel: string }) => (
+    <form onSubmit={onSubmit} className="space-y-4">
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* Account */}
+        <div className="space-y-2">
+          <Label htmlFor="account">Account *</Label>
+          <Select
+            value={formData.account_id}
+            onValueChange={(value) => setFormData({ ...formData, account_id: value })}
+            disabled={!!editingTransaction}
+          >
+            <SelectTrigger id="account">
+              <SelectValue placeholder="Select account" />
+            </SelectTrigger>
+            <SelectContent>
+              {accounts.map((account) => (
+                <SelectItem key={account.id} value={account.id}>
+                  {account.account_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-  if (loading && accounts.length === 0) {
-    return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <div className="text-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto"></div>
-          <p className="mt-4 text-sm text-muted-foreground">Loading transactions...</p>
+        {/* Transaction Type */}
+        <div className="space-y-2">
+          <Label htmlFor="type">Type *</Label>
+          <Select
+            value={formData.transaction_type}
+            onValueChange={(value) => setFormData({ ...formData, transaction_type: value as TransactionType, category_id: null })}
+          >
+            <SelectTrigger id="type">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={TransactionType.DEBIT}>Debit (Expense)</SelectItem>
+              <SelectItem value={TransactionType.CREDIT}>Credit (Income)</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
-    )
-  }
+
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* Amount */}
+        <div className="space-y-2">
+          <Label htmlFor="amount">Amount (AED) *</Label>
+          <Input
+            id="amount"
+            type="number"
+            step="0.01"
+            min="0.01"
+            required
+            value={formData.amount || ''}
+            onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
+          />
+        </div>
+
+        {/* Category */}
+        <div className="space-y-2">
+          <Label htmlFor="category">Category</Label>
+          <Select
+            value={formData.category_id || 'none'}
+            onValueChange={(value) => setFormData({ ...formData, category_id: value === 'none' ? null : value })}
+          >
+            <SelectTrigger id="category">
+              <SelectValue placeholder="Select category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">No Category</SelectItem>
+              {filteredCategories.map((cat) => (
+                <SelectItem key={cat.id} value={cat.id}>
+                  {cat.icon} {cat.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Description */}
+      <div className="space-y-2">
+        <Label htmlFor="description">Description *</Label>
+        <Input
+          id="description"
+          required
+          placeholder="e.g., Grocery shopping"
+          value={formData.description}
+          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+        />
+      </div>
+
+      {/* Transaction Date */}
+      <div className="space-y-2">
+        <Label htmlFor="txDate">Transaction Date *</Label>
+        <Input
+          id="txDate"
+          type="date"
+          required
+          value={formData.transaction_date}
+          onChange={(e) => setFormData({ ...formData, transaction_date: e.target.value })}
+        />
+      </div>
+
+      {/* Notes */}
+      <div className="space-y-2">
+        <Label htmlFor="notes">Notes</Label>
+        <Textarea
+          id="notes"
+          placeholder="Additional notes..."
+          rows={3}
+          value={formData.notes}
+          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+        />
+      </div>
+
+      <DialogFooter>
+        <Button type="submit" disabled={submitting}>
+          {submitting ? 'Saving...' : submitLabel}
+        </Button>
+      </DialogFooter>
+    </form>
+  )
 
   return (
     <div className="space-y-6">
@@ -163,7 +346,7 @@ export default function TransactionsPage() {
             View and manage all your financial transactions
           </p>
         </div>
-        <Button>
+        <Button onClick={openCreateDialog}>
           <Plus className="h-4 w-4 mr-2" />
           Add Transaction
         </Button>
@@ -180,9 +363,10 @@ export default function TransactionsPage() {
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search transactions..."
+                placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && loadTransactions()}
                 className="pl-8"
               />
             </div>
@@ -202,27 +386,30 @@ export default function TransactionsPage() {
               </SelectContent>
             </Select>
 
+            {/* Category Filter */}
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    {cat.icon} {cat.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
             {/* Type Filter */}
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <Select value={selectedType} onValueChange={setSelectedType}>
               <SelectTrigger>
                 <SelectValue placeholder="All Types" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="income">Income</SelectItem>
-                <SelectItem value="expense">Expense</SelectItem>
-                <SelectItem value="transfer">Transfer</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Sort */}
-            <Select value={sortBy} onValueChange={(value: 'date' | 'amount') => setSortBy(value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="date">Sort by Date</SelectItem>
-                <SelectItem value="amount">Sort by Amount</SelectItem>
+                <SelectItem value="debit">Debit (Expense)</SelectItem>
+                <SelectItem value="credit">Credit (Income)</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -234,7 +421,7 @@ export default function TransactionsPage() {
         <CardHeader>
           <CardTitle>All Transactions</CardTitle>
           <CardDescription>
-            {filteredTransactions.length} transaction{filteredTransactions.length !== 1 ? 's' : ''} found
+            {transactions.length} transaction{transactions.length !== 1 ? 's' : ''} found
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -242,71 +429,98 @@ export default function TransactionsPage() {
             <div className="flex justify-center py-8">
               <div className="h-6 w-6 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
             </div>
-          ) : filteredTransactions.length === 0 ? (
+          ) : transactions.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground">No transactions found</p>
-              <Button className="mt-4" variant="outline">
+              <Button className="mt-4" variant="outline" onClick={openCreateDialog}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add Your First Transaction
               </Button>
             </div>
           ) : (
             <div className="space-y-2">
-              {filteredTransactions.map((transaction) => (
-                <div
-                  key={transaction.id}
-                  className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
-                >
-                  <div className="flex items-center gap-4 flex-1">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium">{transaction.description || 'Untitled Transaction'}</p>
-                        <Badge variant="outline" className={getTransactionTypeColor(transaction.transaction_type)}>
-                          {transaction.transaction_type}
-                        </Badge>
+              {transactions.map((transaction) => {
+                const account = accounts.find(a => a.id === transaction.account_id)
+                const category = categories.find(c => c.id === transaction.category_id)
+
+                return (
+                  <div
+                    key={transaction.id}
+                    className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-4 flex-1">
+                      <div className="flex-1">
+                        <p className="font-medium">{transaction.description}</p>
+                        <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                          <span>{formatDate(transaction.transaction_date)}</span>
+                          {account && (
+                            <>
+                              <span>•</span>
+                              <span>{account.account_name}</span>
+                            </>
+                          )}
+                          {category && (
+                            <>
+                              <span>•</span>
+                              <span>{category.icon} {category.name}</span>
+                            </>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                        <span>{formatDate(transaction.transaction_date)}</span>
-                        <span>•</span>
-                        <span>{accounts.find(a => a.id === transaction.account_id)?.account_name || 'Unknown Account'}</span>
-                        {transaction.category_id && (
-                          <>
-                            <span>•</span>
-                            <span>Category: {transaction.category_id}</span>
-                          </>
-                        )}
+                      <div className="text-right">
+                        <p className={`text-lg font-semibold ${
+                          transaction.transaction_type === TransactionType.CREDIT ? 'text-green-500' : 'text-red-500'
+                        }`}>
+                          {transaction.transaction_type === TransactionType.CREDIT ? '+' : '-'}
+                          {formatCurrency(transaction.amount)}
+                        </p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className={`text-lg font-semibold ${
-                        transaction.transaction_type === TransactionType.CREDIT ? 'text-green-500' : 'text-red-500'
-                      }`}>
-                        {transaction.transaction_type === TransactionType.CREDIT ? '+' : '-'}
-                        {formatCurrency(Math.abs(transaction.amount))}
-                      </p>
+                    <div className="flex items-center gap-2 ml-4">
+                      <Button variant="ghost" size="icon" onClick={() => openEditDialog(transaction)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(transaction.id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 ml-4">
-                    <Button variant="ghost" size="icon">
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon">
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDelete(transaction.account_id, transaction.id)}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Create Dialog */}
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add New Transaction</DialogTitle>
+            <DialogDescription>
+              Create a new financial transaction
+            </DialogDescription>
+          </DialogHeader>
+          <TransactionForm onSubmit={handleCreate} submitLabel="Create Transaction" />
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Transaction</DialogTitle>
+            <DialogDescription>
+              Update transaction details
+            </DialogDescription>
+          </DialogHeader>
+          <TransactionForm onSubmit={handleUpdate} submitLabel="Update Transaction" />
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

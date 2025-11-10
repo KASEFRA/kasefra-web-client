@@ -8,82 +8,69 @@ import type {
   AssetValuationCreate,
   AssetValuationUpdate,
   AssetValuationListResponse,
+  TotalValueResponse,
 } from '@/types'
 
 export const assetsApi = {
   /**
-   * Get all assets for an account
+   * Get all asset valuations for an account
    */
   async getAll(accountId: string): Promise<AssetValuationListResponse> {
     const response = await apiClient.get<AssetValuationListResponse>(
-      `/assets/${accountId}/valuations`
+      `/accounts/assets/${accountId}/valuations`
     )
     return response.data
   },
 
   /**
-   * Get single asset by ID
+   * Get single asset valuation by ID
    */
-  async getById(accountId: string, assetId: string): Promise<AssetValuation> {
+  async getById(valuationId: string): Promise<AssetValuation> {
     const response = await apiClient.get<AssetValuation>(
-      `/assets/${accountId}/valuations/${assetId}`
+      `/accounts/assets/valuations/${valuationId}`
     )
     return response.data
   },
 
   /**
-   * Create new asset
+   * Create new asset valuation
    */
-  async create(accountId: string, assetData: AssetValuationCreate): Promise<AssetValuation> {
+  async create(assetData: AssetValuationCreate): Promise<AssetValuation> {
     const response = await apiClient.post<AssetValuation>(
-      `/assets/${accountId}/valuations`,
+      `/accounts/assets/valuations`,
       assetData
     )
     return response.data
   },
 
   /**
-   * Update existing asset
+   * Update existing asset valuation
    */
   async update(
-    accountId: string,
-    assetId: string,
+    valuationId: string,
     assetData: AssetValuationUpdate
   ): Promise<AssetValuation> {
     const response = await apiClient.put<AssetValuation>(
-      `/assets/${accountId}/valuations/${assetId}`,
+      `/accounts/assets/valuations/${valuationId}`,
       assetData
     )
     return response.data
   },
 
   /**
-   * Delete asset
+   * Delete asset valuation
    */
-  async delete(accountId: string, assetId: string): Promise<{ message: string }> {
-    const response = await apiClient.delete<{ message: string }>(
-      `/assets/${accountId}/valuations/${assetId}`
-    )
-    return response.data
+  async delete(valuationId: string): Promise<void> {
+    await apiClient.delete(`/accounts/assets/valuations/${valuationId}`)
   },
 
   /**
-   * Get assets summary
+   * Get total asset value for an account
    */
-  async getSummary(accountId: string): Promise<{
-    total_value: number
-    total_cost: number
-    total_appreciation: number
-    total_appreciation_percentage: number
-    assets_count: number
-    by_type: Array<{
-      asset_type: string
-      count: number
-      total_value: number
-      total_cost: number
-    }>
-  }> {
-    const response = await apiClient.get(`/assets/${accountId}/summary`)
+  async getTotalValue(accountId: string): Promise<TotalValueResponse> {
+    const response = await apiClient.get<TotalValueResponse>(
+      `/accounts/assets/${accountId}/total-value`
+    )
     return response.data
   },
 }

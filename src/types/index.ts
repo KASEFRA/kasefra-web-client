@@ -13,19 +13,15 @@ export enum AccountType {
   SAVINGS = 'savings',
   CREDIT_CARD = 'credit_card',
   CASH = 'cash',
-  // Investment accounts
+  // Investment accounts (includes retirement accounts)
   INVESTMENT = 'investment',
-  BROKERAGE = 'brokerage',
-  RETIREMENT = 'retirement',
   // Crypto
   CRYPTO = 'crypto',
-  // Assets
+  // Assets (includes vehicles and other physical assets)
   REAL_ESTATE = 'real_estate',
-  VEHICLE = 'vehicle',
   OTHER_ASSET = 'other_asset',
-  // Liabilities
+  // Liabilities (includes mortgages and other loans)
   LOAN = 'loan',
-  MORTGAGE = 'mortgage',
 }
 
 export enum TransactionType {
@@ -33,13 +29,28 @@ export enum TransactionType {
   CREDIT = 'credit',
 }
 
+export enum CategoryType {
+  INCOME = 'income',
+  EXPENSE = 'expense',
+}
+
 export enum AssetType {
   REAL_ESTATE = 'real_estate',
   VEHICLE = 'vehicle',
   JEWELRY = 'jewelry',
-  ELECTRONICS = 'electronics',
+  ART = 'art',
   COLLECTIBLES = 'collectibles',
+  ELECTRONICS = 'electronics',
+  FURNITURE = 'furniture',
   OTHER = 'other',
+}
+
+export enum ValuationMethod {
+  APPRAISAL = 'appraisal',
+  MARKET_ESTIMATE = 'market_estimate',
+  USER_ESTIMATE = 'user_estimate',
+  PURCHASE_PRICE = 'purchase_price',
+  DEPRECIATION_CALC = 'depreciation_calc',
 }
 
 export enum BudgetType {
@@ -90,18 +101,10 @@ export interface Account {
   account_name: string
   account_type: AccountType
   currency: string
-  current_balance: number
-  available_balance: number | null
-  credit_limit: number | null
   is_active: boolean
+  current_balance: number // Cached balance (auto-synced from transactions/holdings/valuations)
   institution_name: string | null
-  bank_identifier: string | null
   account_number_masked: string | null
-  routing_number: string | null
-  lean_account_id: string | null
-  lean_entity_id: string | null
-  last_synced_at: string | null
-  sync_status: string | null
   notes: string | null
   icon_color: string | null
   created_at: string
@@ -113,14 +116,8 @@ export interface AccountCreate {
   account_name: string
   institution_name?: string | null
   currency?: string
-  // Balance fields - critical for net worth
-  current_balance?: number
-  available_balance?: number | null
-  credit_limit?: number | null
-  // Bank-specific fields
-  bank_identifier?: string | null
+  current_balance?: number // Initial balance for the account (defaults to 0)
   account_number_masked?: string | null
-  routing_number?: string | null
   notes?: string | null
   icon_color?: string | null
 }
@@ -129,12 +126,7 @@ export interface AccountUpdate {
   account_name?: string
   institution_name?: string | null
   currency?: string | null
-  current_balance?: number | null
-  available_balance?: number | null
-  credit_limit?: number | null
-  bank_identifier?: string | null
   account_number_masked?: string | null
-  routing_number?: string | null
   notes?: string | null
   icon_color?: string | null
   is_active?: boolean
@@ -150,36 +142,33 @@ export interface AccountListResponse {
 export interface BankTransaction {
   id: string
   account_id: string
-  transaction_date: string
-  description: string
+  category_id: string | null
   amount: number
   transaction_type: TransactionType
-  category_id: string | null
-  category_name: string | null
-  merchant_name: string | null
-  running_balance: number | null
+  description: string
+  transaction_date: string
+  is_recurring: boolean
   notes: string | null
   created_at: string
   updated_at: string
 }
 
 export interface BankTransactionCreate {
-  transaction_date: string
-  description: string
+  account_id: string
+  category_id?: string | null
   amount: number
   transaction_type: TransactionType
-  category_id?: string | null
-  merchant_name?: string | null
+  description: string
+  transaction_date: string
   notes?: string | null
 }
 
 export interface BankTransactionUpdate {
-  transaction_date?: string
-  description?: string
+  category_id?: string | null
   amount?: number
   transaction_type?: TransactionType
-  category_id?: string | null
-  merchant_name?: string | null
+  description?: string
+  transaction_date?: string
   notes?: string | null
 }
 
@@ -287,42 +276,55 @@ export interface AssetValuation {
   asset_name: string
   asset_type: AssetType
   purchase_price: number
-  current_value: number
   purchase_date: string
+  current_value: number
   valuation_date: string
-  appreciation: number | null
-  appreciation_percentage: number | null
+  valuation_method: ValuationMethod
+  depreciation_rate: number | null
   location: string | null
   notes: string | null
   created_at: string
   updated_at: string
+  // Calculated fields
+  total_gain_loss?: number
+  return_percentage?: number
 }
 
 export interface AssetValuationCreate {
+  account_id: string
   asset_name: string
   asset_type: AssetType
   purchase_price: number
-  current_value: number
   purchase_date: string
+  current_value: number
   valuation_date: string
+  valuation_method: ValuationMethod
+  depreciation_rate?: number | null
   location?: string | null
   notes?: string | null
 }
 
 export interface AssetValuationUpdate {
-  asset_name?: string
-  asset_type?: AssetType
-  purchase_price?: number
   current_value?: number
-  purchase_date?: string
   valuation_date?: string
+  valuation_method?: ValuationMethod
+  depreciation_rate?: number | null
   location?: string | null
   notes?: string | null
 }
 
 export interface AssetValuationListResponse {
-  assets: AssetValuation[]
+  valuations: AssetValuation[]
   total_count: number
+}
+
+export interface TotalValueResponse {
+  account_id: string
+  total_purchase_price: number
+  total_current_value: number
+  total_gain_loss: number
+  assets_count: number
+  as_of_date: string
 }
 
 // ===== CATEGORY TYPES =====
@@ -331,34 +333,43 @@ export interface Category {
   id: string
   user_id: string
   name: string
-  description: string | null
-  parent_id: string | null
-  color: string | null
+  category_type: CategoryType
+  parent_category_id: string | null
   icon: string | null
-  is_system: boolean
+  color: string | null
+  is_active: boolean
+  is_default: boolean
   created_at: string
   updated_at: string
 }
 
 export interface CategoryCreate {
   name: string
-  description?: string | null
-  parent_id?: string | null
-  color?: string | null
+  category_type: CategoryType
+  parent_category_id?: string | null
   icon?: string | null
+  color?: string | null
 }
 
 export interface CategoryUpdate {
   name?: string
-  description?: string | null
-  parent_id?: string | null
-  color?: string | null
+  parent_category_id?: string | null
   icon?: string | null
+  color?: string | null
+  is_active?: boolean
 }
 
 export interface CategoryListResponse {
   categories: Category[]
   total_count: number
+}
+
+export interface CategoryStatsResponse {
+  total_categories: number
+  expense_categories: number
+  income_categories: number
+  custom_categories: number
+  default_categories: number
 }
 
 // ===== BUDGET TYPES =====

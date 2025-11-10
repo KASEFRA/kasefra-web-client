@@ -8,6 +8,7 @@ import type {
   CategoryCreate,
   CategoryUpdate,
   CategoryListResponse,
+  CategoryStatsResponse,
 } from '@/types'
 
 export const categoriesApi = {
@@ -74,6 +75,22 @@ export const categoriesApi = {
    */
   async getUserCategories(): Promise<CategoryListResponse> {
     const response = await apiClient.get<CategoryListResponse>('/categories?is_system=false')
+    return response.data
+  },
+
+  /**
+   * Get category statistics
+   */
+  async getStats(): Promise<CategoryStatsResponse> {
+    const response = await apiClient.get<CategoryStatsResponse>('/categories/stats')
+    return response.data
+  },
+
+  /**
+   * Seed default UAE-focused categories
+   */
+  async seedDefaults(): Promise<CategoryListResponse> {
+    const response = await apiClient.post<CategoryListResponse>('/categories/seed-defaults')
     return response.data
   },
 }
