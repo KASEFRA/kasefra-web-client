@@ -8,7 +8,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/components/providers/auth-provider'
 import { networthApi } from '@/lib/api'
-import { formatCurrency, BASE_CURRENCY } from '@/lib/currency'
+import { formatCurrency } from '@/lib/currency'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
@@ -20,8 +20,13 @@ import {
   ArrowRightLeft,
   PieChart,
   Target,
-  FileText,
 } from 'lucide-react'
+
+// Import Dashboard Widgets
+import { RecentTransactions } from '@/components/dashboard/widgets/recent-transactions'
+import { BudgetProgressWidget } from '@/components/dashboard/widgets/budget-progress'
+import { UpcomingBillsWidget } from '@/components/dashboard/widgets/upcoming-bills'
+import { ActiveGoalsWidget } from '@/components/dashboard/widgets/active-goals'
 
 export default function DashboardPage() {
   const { user } = useAuth()
@@ -204,25 +209,17 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Recent Activity */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col items-center justify-center py-12">
-            <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No transactions yet</h3>
-            <p className="text-sm text-muted-foreground text-center max-w-sm mb-6">
-              Start by connecting your accounts or adding transactions manually to see your activity here.
-            </p>
-            <Button onClick={() => (window.location.href = '/dashboard/accounts')}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Account
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Dashboard Widgets - Row 1 */}
+      <div className="grid gap-6 md:grid-cols-2">
+        <RecentTransactions />
+        <BudgetProgressWidget />
+      </div>
+
+      {/* Dashboard Widgets - Row 2 */}
+      <div className="grid gap-6 md:grid-cols-2">
+        <UpcomingBillsWidget />
+        <ActiveGoalsWidget />
+      </div>
     </div>
   )
 }

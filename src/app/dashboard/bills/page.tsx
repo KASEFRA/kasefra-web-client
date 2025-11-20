@@ -2,106 +2,113 @@
 
 /**
  * Recurring Bills Page
- * Manage recurring bills and upcoming payments
+ * Manage recurring bills and track payments
  */
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { budgetsApi } from '@/lib/api'
-import type { RecurringBill, UpcomingBillsResponse } from '@/types'
-import { Plus, Edit, Trash2, Calendar, DollarSign, AlertCircle } from 'lucide-react'
+import type { RecurringBill } from '@/types'
+import { Plus, Loader2, Calendar, DollarSign, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { BillsList } from '@/components/bills/bills-list'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { toast } from 'sonner'
+import { formatCurrency } from '@/lib/currency'
 
 export default function BillsPage() {
-  const [bills, setBills] = useState<RecurringBill[]>([])
-  const [upcomingBills, setUpcomingBills] = useState<UpcomingBillsResponse | null>(null)
+  const router = useRouter()
+  const [allBills, setAllBills] = useState<RecurringBill[]>([])
+  const [upcomingBills, setUpcomingBills] = useState<RecurringBill[]>([])
+  const [overdueBills, setOverdueBills] = useState<RecurringBill[]>([])
+  const [upcomingTotal, setUpcomingTotal] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [billToDelete, setBillToDelete] = useState<RecurringBill | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
-    loadBills()
-    loadUpcomingBills()
+    loadData()
   }, [])
 
-  const loadBills = async () => {
+  const loadData = async () => {
     try {
-      const response = await budgetsApi.getAllBills()
-      setBills(response.bills)
-    } catch (error) {
+      setLoading(true)
+      
+      // Load all bills and upcoming bills
+      const [allBillsRes, upcomingRes] = await Promise.all([
+        budgetsApi.getAllBills(),
+        budgetsApi.getUpcomingBills(30),
+      ])
+
+      setAllBills(allBillsRes.bills)
+      setUpcomingBills(upcomingRes.bills)
+      setUpcomingTotal(upcomingRes.total_amount)
+      
+      // Filter overdue bills from all bills
+      const overdue = allBillsRes.bills.filter(bill => bill.is_overdue === true)
+      setOverdueBills(overdue)
+    } catch (error: any) {
       console.error('Failed to load bills:', error)
+      toast.error('Failed to load bills')
     } finally {
       setLoading(false)
     }
   }
 
-  const loadUpcomingBills = async () => {
-    try {
-      const upcoming = await budgetsApi.getUpcomingBills(30)
-      setUpcomingBills(upcoming)
-    } catch (error) {
-      console.error('Failed to load upcoming bills:', error)
-    }
-  }
-
-  const handleDelete = async (billId: string) => {
-    if (!confirm('Are you sure you want to delete this bill?')) {
-      return
-    }
-
-    try {
-      await budgetsApi.deleteBill(billId)
-      await loadBills()
-      await loadUpcomingBills()
-    } catch (error) {
-      console.error('Failed to delete bill:', error)
-      alert('Failed to delete bill')
-    }
-  }
-
-  const handleMarkPaid = async (billId: string) => {
+  const handleMarkPaid = async (bill: RecurringBill) => {
     try {
       const today = new Date().toISOString().split('T')[0]
-      await budgetsApi.markBillPaid(billId, today)
-      await loadBills()
-      await loadUpcomingBills()
-    } catch (error) {
+      await budgetsApi.markBillPaid(bill.id, today)
+      toast.success(`${bill.bill_name} marked as paid`)
+      loadData()
+    } catch (error: any) {
       console.error('Failed to mark bill as paid:', error)
-      alert('Failed to mark bill as paid')
+      toast.error(error.response?.data?.detail || 'Failed to mark bill as paid')
     }
   }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-AE', {
-      style: 'currency',
-      currency: 'AED',
-      minimumFractionDigits: 2,
-    }).format(amount)
+  const handleEdit = (bill: RecurringBill) => {
+    router.push(`/dashboard/bills/${bill.id}/edit`)
   }
 
-  const formatFrequency = (frequency: string) => {
-    return frequency.charAt(0).toUpperCase() + frequency.slice(1).replace('_', ' ')
+  const handleDelete = (bill: RecurringBill) => {
+    setBillToDelete(bill)
   }
 
-  const getDaysUntilDueColor = (daysUntil: number | null) => {
-    if (daysUntil === null) return 'text-muted-foreground'
-    if (daysUntil < 0) return 'text-red-600'
-    if (daysUntil <= 3) return 'text-orange-600'
-    if (daysUntil <= 7) return 'text-yellow-600'
-    return 'text-green-600'
-  }
+  const confirmDelete = async () => {
+    if (!billToDelete) return
 
-  const getDaysUntilDueText = (daysUntil: number | null, isOverdue: boolean | null) => {
-    if (daysUntil === null) return ''
-    if (isOverdue) return 'Overdue'
-    if (daysUntil === 0) return 'Due today'
-    if (daysUntil === 1) return 'Due tomorrow'
-    return `Due in ${daysUntil} days`
+    try {
+      setIsDeleting(true)
+      await budgetsApi.deleteBill(billToDelete.id)
+      toast.success('Bill deleted successfully')
+      setBillToDelete(null)
+      loadData()
+    } catch (error: any) {
+      console.error('Failed to delete bill:', error)
+      toast.error(error.response?.data?.detail || 'Failed to delete bill')
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-          <p className="mt-2 text-sm text-muted-foreground">Loading bills...</p>
+      <div className="flex min-h-[400px] items-center justify-center">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">Loading bills...</p>
         </div>
       </div>
     )
@@ -112,158 +119,185 @@ export default function BillsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Recurring Bills</h1>
-          <p className="mt-1 text-muted-foreground">
-            Manage your recurring payments and bills
+          <h1 className="text-3xl font-bold tracking-tight">Recurring Bills</h1>
+          <p className="text-muted-foreground">
+            Manage your recurring payments and track due dates
           </p>
         </div>
-        <Button onClick={() => window.location.href = '/dashboard/bills/new'}>
+        <Button onClick={() => router.push('/dashboard/bills/new')}>
           <Plus className="mr-2 h-4 w-4" />
           Add Bill
         </Button>
       </div>
 
-      {/* Upcoming Bills Summary */}
-      {upcomingBills && upcomingBills.count > 0 && (
-        <div className="rounded-lg border border-orange-200 bg-orange-50 p-6">
-          <div className="flex items-center gap-3">
-            <AlertCircle className="h-6 w-6 text-orange-600" />
-            <div>
-              <h3 className="font-semibold text-orange-900">
-                Upcoming Bills (Next 30 Days)
-              </h3>
-              <p className="mt-1 text-sm text-orange-700">
-                {upcomingBills.count} {upcomingBills.count === 1 ? 'bill' : 'bills'} due •{' '}
-                Total: {formatCurrency(upcomingBills.total_amount)}
-              </p>
+      {/* Summary Cards */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total Bills
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{allBills.length}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {allBills.filter(b => b.is_active).length} active
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Upcoming (30 days)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrency(upcomingTotal)}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {upcomingBills.length} bills due
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Overdue
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${overdueBills.length > 0 ? 'text-red-600' : ''}`}>
+              {overdueBills.length}
             </div>
-          </div>
-        </div>
-      )}
+            <p className="text-xs text-muted-foreground mt-1">
+              {overdueBills.length > 0 ? 'Requires attention' : 'All caught up!'}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
-      {/* Bills List */}
-      {bills.length === 0 ? (
-        <div className="rounded-lg border border-border bg-card p-12 text-center">
-          <Calendar className="mx-auto h-12 w-12 text-muted-foreground" />
-          <h3 className="mt-4 text-lg font-semibold text-foreground">No recurring bills yet</h3>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Add your first recurring bill to track upcoming payments
-          </p>
-          <Button
-            className="mt-4"
-            onClick={() => window.location.href = '/dashboard/bills/new'}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Add Bill
-          </Button>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {bills.map((bill) => (
-            <div
-              key={bill.id}
-              className={`rounded-lg border bg-card p-6 ${
-                bill.is_overdue
-                  ? 'border-red-200 bg-red-50'
-                  : bill.days_until_due !== null && bill.days_until_due <= 3
-                  ? 'border-orange-200 bg-orange-50'
-                  : 'border-border'
-              }`}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                      <DollarSign className="h-6 w-6 text-primary" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-lg font-semibold text-foreground">
-                          {bill.bill_name}
-                        </h3>
-                        {bill.is_autopay && (
-                          <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-800">
-                            Auto-pay
-                          </span>
-                        )}
-                        {!bill.is_active && (
-                          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
-                            Inactive
-                          </span>
-                        )}
-                      </div>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {bill.merchant_name || 'No merchant'}
-                        {bill.category_name && ` • ${bill.category_name}`}
-                      </p>
-                    </div>
-                  </div>
+      {/* Bills Tabs */}
+      <Tabs defaultValue="all" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="all">
+            All Bills ({allBills.length})
+          </TabsTrigger>
+          <TabsTrigger value="upcoming">
+            Upcoming ({upcomingBills.length})
+          </TabsTrigger>
+          <TabsTrigger value="overdue">
+            Overdue ({overdueBills.length})
+          </TabsTrigger>
+        </TabsList>
 
-                  {/* Bill Details */}
-                  <div className="mt-4 grid gap-4 md:grid-cols-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Amount</p>
-                      <p className="mt-1 text-xl font-bold text-foreground">
-                        {formatCurrency(bill.amount)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Frequency</p>
-                      <p className="mt-1 font-semibold text-foreground">
-                        {formatFrequency(bill.frequency)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Next Due Date</p>
-                      <p className="mt-1 font-semibold text-foreground">
-                        {new Date(bill.next_due_date).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Status</p>
-                      <p className={`mt-1 font-semibold ${getDaysUntilDueColor(bill.days_until_due)}`}>
-                        {getDaysUntilDueText(bill.days_until_due, bill.is_overdue)}
-                      </p>
-                    </div>
-                  </div>
+        <TabsContent value="all" className="space-y-4">
+          <BillsList
+            bills={allBills}
+            onMarkPaid={handleMarkPaid}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
+        </TabsContent>
 
-                  {bill.last_paid_date && (
-                    <p className="mt-3 text-sm text-muted-foreground">
-                      Last paid: {new Date(bill.last_paid_date).toLocaleDateString()}
+        <TabsContent value="upcoming" className="space-y-4">
+          {upcomingBills.length > 0 ? (
+            <>
+              <Card className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    <p className="text-sm text-blue-900 dark:text-blue-100">
+                      You have <strong>{upcomingBills.length} bills</strong> due in the next 30 days,
+                      totaling <strong>{formatCurrency(upcomingTotal)}</strong>
                     </p>
-                  )}
-                </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <BillsList
+                bills={upcomingBills}
+                onMarkPaid={handleMarkPaid}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
+            </>
+          ) : (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No upcoming bills</h3>
+                <p className="text-sm text-muted-foreground text-center">
+                  You don't have any bills due in the next 30 days.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
 
-                {/* Actions */}
-                <div className="flex flex-col gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleMarkPaid(bill.id)}
-                  >
-                    Mark Paid
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => window.location.href = `/dashboard/bills/${bill.id}/edit`}
-                  >
-                    <Edit className="mr-1 h-3 w-3" />
-                    Edit
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDelete(bill.id)}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+        <TabsContent value="overdue" className="space-y-4">
+          {overdueBills.length > 0 ? (
+            <>
+              <Card className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                    <p className="text-sm text-red-900 dark:text-red-100">
+                      You have <strong>{overdueBills.length} overdue bills</strong> that need attention.
+                      Please review and mark them as paid.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+              <BillsList
+                bills={overdueBills}
+                onMarkPaid={handleMarkPaid}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
+            </>
+          ) : (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <DollarSign className="h-12 w-12 text-green-600 mb-4" />
+                <h3 className="text-lg font-semibold mb-2">All caught up!</h3>
+                <p className="text-sm text-muted-foreground text-center">
+                  You don't have any overdue bills. Keep up the good work!
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!billToDelete} onOpenChange={(open) => !open && setBillToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Bill</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{billToDelete?.bill_name}</strong>? 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete Bill'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

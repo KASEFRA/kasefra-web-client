@@ -48,7 +48,7 @@ export default function DashboardLayout({
   return (
     <SidebarProvider defaultOpen={true}>
       <AppSidebar />
-      <SidebarInset className="md:ml-64 md:peer-data-[state=collapsed]:ml-[3.25rem]">
+      <SidebarInset>
         <SiteHeader />
         <main className="flex-1 p-4 md:p-6 lg:p-8">
           {children}

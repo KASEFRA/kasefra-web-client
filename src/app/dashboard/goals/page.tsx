@@ -1,370 +1,299 @@
 'use client'
 
 /**
- * Goals Page
- * Manage financial goals and track progress
+ * Goals Overview Page
+ * Display all financial goals with summary and filtering
  */
 
-import { useEffect, useState } from 'react'
-import { goalsApi } from '@/lib/api'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { goalsApi } from '@/lib/api/goals'
+import type { Goal, GoalSummary } from '@/types'
 import { formatCurrency } from '@/lib/currency'
-import type { Goal, GoalProgress, GoalSummary, GoalType, GoalStatus } from '@/types'
-import { Plus, Edit, Trash2, Target, TrendingUp, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { GoalsList } from '@/components/goals/goals-list'
+import { Target, TrendingUp, CheckCircle, Plus, Loader2, AlertCircle } from 'lucide-react'
+import { toast } from 'sonner'
 
 export default function GoalsPage() {
-  const [goals, setGoals] = useState<Goal[]>([])
-  const [summary, setSummary] = useState<GoalSummary | null>(null)
-  const [goalProgresses, setGoalProgresses] = useState<Record<string, GoalProgress>>({})
+  const router = useRouter()
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'all' | GoalType | GoalStatus>('all')
+  const [summary, setSummary] = useState<GoalSummary | null>(null)
+  const [allGoals, setAllGoals] = useState<Goal[]>([])
+  const [activeGoals, setActiveGoals] = useState<Goal[]>([])
+  const [completedGoals, setCompletedGoals] = useState<Goal[]>([])
+  const [activeTab, setActiveTab] = useState('active')
+  const [goalToDelete, setGoalToDelete] = useState<Goal | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
-    loadGoals()
-    loadSummary()
+    loadData()
   }, [])
 
-  const loadGoals = async () => {
+  const loadData = async () => {
     try {
       setLoading(true)
-      const response = await goalsApi.getAll()
-      setGoals(response.goals)
+      
+      const [summaryRes, allGoalsRes] = await Promise.all([
+        goalsApi.getSummary(),
+        goalsApi.getAll()
+      ])
 
-      // Load progress for each goal
-      const progresses: Record<string, GoalProgress> = {}
-      for (const goal of response.goals) {
-        try {
-          const progress = await goalsApi.getProgress(goal.id)
-          progresses[goal.id] = progress
-        } catch (error) {
-          console.error(`Failed to load progress for goal ${goal.id}:`, error)
-        }
-      }
-      setGoalProgresses(progresses)
+      setSummary(summaryRes)
+      setAllGoals(allGoalsRes.goals)
+
+      const active = allGoalsRes.goals.filter(g => g.status === 'active')
+      const completed = allGoalsRes.goals.filter(g => g.status === 'completed')
+      
+      setActiveGoals(active)
+      setCompletedGoals(completed)
     } catch (error) {
       console.error('Failed to load goals:', error)
+      toast.error('Failed to load goals. Please try again.')
     } finally {
       setLoading(false)
     }
   }
 
-  const loadSummary = async () => {
-    try {
-      const summaryData = await goalsApi.getSummary()
-      setSummary(summaryData)
-    } catch (error) {
-      console.error('Failed to load goals summary:', error)
-    }
-  }
-
-  const handleDelete = async (goalId: string) => {
-    if (!confirm('Are you sure you want to delete this goal?')) {
-      return
-    }
+  const handleDelete = async () => {
+    if (!goalToDelete) return
 
     try {
-      await goalsApi.delete(goalId)
-      await loadGoals()
-      await loadSummary()
+      setDeleting(true)
+      await goalsApi.delete(goalToDelete.id)
+      
+      toast.success('Goal deleted successfully')
+      
+      setGoalToDelete(null)
+      loadData()
     } catch (error) {
       console.error('Failed to delete goal:', error)
-      alert('Failed to delete goal')
+      toast.error('Failed to delete goal. Please try again.')
+    } finally {
+      setDeleting(false)
     }
   }
-
-  const formatGoalType = (type: string) => {
-    return type
-      .split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ')
-  }
-
-  const getGoalTypeIcon = (type: GoalType) => {
-    switch (type) {
-      case 'savings':
-      case 'emergency_fund':
-        return '💰'
-      case 'purchase':
-        return '🛍️'
-      case 'debt_payoff':
-        return '💳'
-      case 'investment':
-        return '📈'
-      case 'hajj':
-        return '🕋'
-      case 'education':
-        return '🎓'
-      case 'retirement':
-        return '🏖️'
-      default:
-        return '🎯'
-    }
-  }
-
-  const filteredGoals = filter === 'all'
-    ? goals
-    : goals.filter(goal => goal.goal_type === filter || goal.status === filter)
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-          <p className="mt-2 text-sm text-muted-foreground">Loading goals...</p>
-        </div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     )
   }
 
+  const activeGoalsWithWarning = activeGoals.filter(g => {
+    const daysRemaining = Math.ceil(
+      (new Date(g.target_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+    )
+    return daysRemaining < 30
+  })
+
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Financial Goals</h1>
-          <p className="mt-1 text-muted-foreground">
-            Track your financial goals and stay motivated
+          <h1 className="text-3xl font-bold">Financial Goals</h1>
+          <p className="text-muted-foreground mt-1">
+            Track and achieve your savings goals
           </p>
         </div>
-        <Button onClick={() => window.location.href = '/dashboard/goals/new'}>
-          <Plus className="mr-2 h-4 w-4" />
+        <Button onClick={() => router.push('/dashboard/goals/new')}>
+          <Plus className="h-4 w-4 mr-2" />
           Create Goal
         </Button>
       </div>
 
-      {/* Summary Stats */}
+      {activeGoalsWithWarning.length > 0 && (
+        <div className="bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-900 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-orange-600 dark:text-orange-500 mt-0.5" />
+            <div>
+              <h3 className="font-medium text-orange-900 dark:text-orange-100">
+                {activeGoalsWithWarning.length} {activeGoalsWithWarning.length === 1 ? 'goal' : 'goals'} approaching deadline
+              </h3>
+              <p className="text-sm text-orange-700 dark:text-orange-300 mt-1">
+                {activeGoalsWithWarning.length === 1 
+                  ? 'One of your goals has less than 30 days remaining.' 
+                  : `${activeGoalsWithWarning.length} goals have less than 30 days remaining.`
+                }
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {summary && (
-        <div className="grid gap-4 md:grid-cols-4">
-          <div className="rounded-lg border border-border bg-card p-4">
-            <div className="flex items-center gap-2">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Goals</CardTitle>
               <Target className="h-4 w-4 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">Total Goals</p>
-            </div>
-            <p className="mt-2 text-2xl font-bold text-foreground">{summary.total_goals}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {summary.active_goals} active • {summary.completed_goals} completed
-            </p>
-          </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{summary.total_goals}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {summary.active_goals} active, {summary.completed_goals} completed
+              </p>
+            </CardContent>
+          </Card>
 
-          <div className="rounded-lg border border-border bg-card p-4">
-            <div className="flex items-center gap-2">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Target</CardTitle>
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">Total Target</p>
-            </div>
-            <p className="mt-2 text-2xl font-bold text-foreground">
-              {formatCurrency(summary.total_target_amount)}
-            </p>
-          </div>
-
-          <div className="rounded-lg border border-border bg-card p-4">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">Overall Progress</p>
-            </div>
-            <p className="mt-2 text-2xl font-bold text-green-600">
-              {summary.overall_progress_percentage.toFixed(1)}%
-            </p>
-            <Progress value={summary.overall_progress_percentage} className="mt-2" />
-          </div>
-
-          <div className="rounded-lg border border-border bg-card p-4">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">Goal Status</p>
-            </div>
-            <p className="mt-2 text-2xl font-bold text-foreground">
-              {summary.goals_on_track}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              On track • {summary.goals_behind_schedule} behind
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Filter Tabs */}
-      <div className="flex gap-2 overflow-x-auto">
-        <Button
-          variant={filter === 'all' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setFilter('all')}
-        >
-          All Goals
-        </Button>
-        <Button
-          variant={filter === 'active' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setFilter('active')}
-        >
-          Active
-        </Button>
-        <Button
-          variant={filter === 'completed' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setFilter('completed')}
-        >
-          Completed
-        </Button>
-      </div>
-
-      {/* Goals List */}
-      {filteredGoals.length > 0 ? (
-        <div className="space-y-4">
-          {filteredGoals.map((goal) => {
-            const progress = goalProgresses[goal.id]
-            return (
-              <div
-                key={goal.id}
-                className="rounded-lg border border-border bg-card p-6"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">{getGoalTypeIcon(goal.goal_type)}</span>
-                      <div>
-                        <h3 className="text-lg font-semibold text-foreground">
-                          {goal.goal_name}
-                        </h3>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {formatGoalType(goal.goal_type)}
-                          {goal.status === 'completed' && (
-                            <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-700">
-                              <CheckCircle2 className="h-3 w-3" />
-                              Completed
-                            </span>
-                          )}
-                          {goal.status === 'paused' && (
-                            <span className="ml-2 inline-flex items-center rounded-full bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-700">
-                              Paused
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                    </div>
-
-                    {goal.description && (
-                      <p className="mt-3 text-sm text-muted-foreground">{goal.description}</p>
-                    )}
-
-                    {/* Progress Info */}
-                    {progress && (
-                      <div className="mt-4 space-y-3">
-                        <div className="grid gap-4 md:grid-cols-4">
-                          <div>
-                            <p className="text-xs text-muted-foreground">Current</p>
-                            <p className="mt-1 text-lg font-semibold text-foreground">
-                              {formatCurrency(goal.current_amount, goal.currency as 'AED' | 'USD')}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">Target</p>
-                            <p className="mt-1 text-lg font-semibold text-foreground">
-                              {formatCurrency(goal.target_amount, goal.currency as 'AED' | 'USD')}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">Remaining</p>
-                            <p className="mt-1 text-lg font-semibold text-foreground">
-                              {formatCurrency(progress.remaining_amount, goal.currency as 'AED' | 'USD')}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">Days Left</p>
-                            <p className="mt-1 text-lg font-semibold text-foreground">
-                              {progress.days_remaining}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Progress Bar */}
-                        <div>
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">Progress</span>
-                            <div className="flex items-center gap-2">
-                              <span className="font-semibold text-foreground">
-                                {progress.progress_percentage.toFixed(1)}%
-                              </span>
-                              {progress.on_track ? (
-                                <span className="inline-flex items-center gap-1 text-xs text-green-600">
-                                  <TrendingUp className="h-3 w-3" />
-                                  On track
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 text-xs text-red-600">
-                                  <AlertCircle className="h-3 w-3" />
-                                  Behind
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <Progress
-                            value={Math.min(progress.progress_percentage, 100)}
-                            className="mt-2"
-                          />
-                        </div>
-
-                        {/* Required Contribution */}
-                        {progress.required_monthly_contribution > 0 && (
-                          <div className="rounded-lg bg-background p-3">
-                            <p className="text-xs text-muted-foreground">
-                              Required monthly contribution to reach goal
-                            </p>
-                            <p className="mt-1 text-lg font-semibold text-foreground">
-                              {formatCurrency(progress.required_monthly_contribution, goal.currency as 'AED' | 'USD')}/month
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => window.location.href = `/dashboard/goals/${goal.id}/edit`}
-                    >
-                      <Edit className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDelete(goal.id)}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {formatCurrency(summary.total_target_amount)}
               </div>
-            )
-          })}
-        </div>
-      ) : (
-        /* No Goals State */
-        <div className="rounded-lg border border-border bg-card p-12 text-center">
-          <Target className="mx-auto h-12 w-12 text-muted-foreground" />
-          <h3 className="mt-4 text-lg font-semibold text-foreground">
-            {filter === 'all' ? 'No goals yet' : `No ${filter} goals`}
-          </h3>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {filter === 'all'
-              ? 'Create your first goal to start tracking your financial progress'
-              : `You don't have any ${filter} goals at the moment`
-            }
-          </p>
-          {filter === 'all' && (
-            <Button
-              className="mt-4"
-              onClick={() => window.location.href = '/dashboard/goals/new'}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Create Goal
-            </Button>
-          )}
+              <p className="text-xs text-muted-foreground mt-1">
+                Across all goals
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Current Savings</CardTitle>
+              <CheckCircle className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {formatCurrency(summary.total_current_amount)}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {Number(summary.overall_progress_percentage || 0).toFixed(1)}% of target
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Amount Remaining</CardTitle>
+              <Target className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {formatCurrency(summary.total_target_amount - summary.total_current_amount)}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                To reach all goals
+              </p>
+            </CardContent>
+          </Card>
         </div>
       )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Your Goals</CardTitle>
+          <CardDescription>
+            View and manage your financial goals
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="active">
+                Active ({activeGoals.length})
+              </TabsTrigger>
+              <TabsTrigger value="completed">
+                Completed ({completedGoals.length})
+              </TabsTrigger>
+              <TabsTrigger value="all">
+                All ({allGoals.length})
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="active" className="space-y-4">
+              {activeGoals.length > 0 ? (
+                <GoalsList 
+                  goals={activeGoals} 
+                  onDelete={(goal) => setGoalToDelete(goal)}
+                />
+              ) : (
+                <div className="text-center py-12">
+                  <Target className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No active goals</h3>
+                  <p className="text-sm text-muted-foreground mb-6">
+                    Create a new goal to start saving for your financial dreams
+                  </p>
+                  <Button onClick={() => router.push('/dashboard/goals/new')}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Goal
+                  </Button>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="completed" className="space-y-4">
+              {completedGoals.length > 0 ? (
+                <GoalsList 
+                  goals={completedGoals} 
+                  onDelete={(goal) => setGoalToDelete(goal)}
+                />
+              ) : (
+                <div className="text-center py-12">
+                  <CheckCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No completed goals yet</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Completed goals will appear here
+                  </p>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="all" className="space-y-4">
+              <GoalsList 
+                goals={allGoals} 
+                onDelete={(goal) => setGoalToDelete(goal)}
+              />
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!goalToDelete} onOpenChange={(open) => !open && setGoalToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Goal</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{goalToDelete?.goal_name}&quot;? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

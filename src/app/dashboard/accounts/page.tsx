@@ -10,14 +10,16 @@ import { useRouter } from 'next/navigation'
 import { accountsApi } from '@/lib/api'
 import { formatCurrency } from '@/lib/currency'
 import type { Account, AccountType } from '@/types'
-import { Plus, Edit, Trash2, Eye } from 'lucide-react'
+import { Plus, Edit, Trash2, Eye, Landmark } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { CreateCheckingAccountDialog } from '@/components/accounts/create-checking-account-dialog'
 
 export default function AccountsPage() {
   const router = useRouter()
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<string>('all')
+  const [showCheckingDialog, setShowCheckingDialog] = useState(false)
 
   useEffect(() => {
     loadAccounts()
@@ -83,11 +85,26 @@ export default function AccountsPage() {
             Manage all your financial accounts
           </p>
         </div>
-        <Button onClick={() => router.push('/dashboard/accounts/add')}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Account
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowCheckingDialog(true)}
+          >
+            <Landmark className="mr-2 h-4 w-4" />
+            New Checking
+          </Button>
+          <Button onClick={() => router.push('/dashboard/accounts/add')}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Account
+          </Button>
+        </div>
       </div>
+
+      {/* Checking Account Creation Dialog */}
+      <CreateCheckingAccountDialog
+        open={showCheckingDialog}
+        onOpenChange={setShowCheckingDialog}
+      />
 
       {/* Filters */}
       <div className="flex flex-wrap gap-2">
@@ -176,7 +193,8 @@ export default function AccountsPage() {
           {accounts.map((account) => (
             <div
               key={account.id}
-              className="rounded-lg border border-border bg-card p-6 transition-shadow hover:shadow-md"
+              className="rounded-lg border border-border bg-card p-6 transition-all hover:shadow-md hover:border-primary cursor-pointer"
+              onClick={() => router.push(`/dashboard/accounts/${account.id}`)}
             >
               {/* Account Header */}
               <div className="flex items-start justify-between">
@@ -205,36 +223,16 @@ export default function AccountsPage() {
               {account.institution_name && (
                 <p className="mt-2 text-sm text-muted-foreground">
                   {account.institution_name}
-                  {account.account_number_masked && ` ${account.account_number_masked}`}
                 </p>
               )}
 
               {/* Balance */}
-              <div className="mt-4 space-y-2">
-                <div>
-                  <p className="text-sm text-muted-foreground">Current Balance</p>
-                  <p className="text-2xl font-bold text-foreground">
-                    {formatCurrency(account.current_balance, account.currency as 'AED' | 'USD')}
-                  </p>
-                </div>
-
-                {account.available_balance !== null && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Available Balance</p>
-                    <p className="text-lg font-semibold text-foreground">
-                      {formatCurrency(account.available_balance, account.currency as 'AED' | 'USD')}
-                    </p>
-                  </div>
-                )}
-
-                {account.credit_limit && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Credit Limit</p>
-                    <p className="text-lg font-semibold text-foreground">
-                      {formatCurrency(account.credit_limit, account.currency as 'AED' | 'USD')}
-                    </p>
-                  </div>
-                )}
+              <div className="mt-4">
+                <p className="text-sm text-muted-foreground">Current Balance</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {formatCurrency(account.current_balance)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">{account.currency}</p>
               </div>
 
               {/* Actions */}
@@ -243,7 +241,10 @@ export default function AccountsPage() {
                   variant="outline"
                   size="sm"
                   className="flex-1"
-                  onClick={() => window.location.href = `/dashboard/accounts/${account.id}`}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    router.push(`/dashboard/accounts/${account.id}`)
+                  }}
                 >
                   <Eye className="mr-1 h-3 w-3" />
                   View
@@ -251,7 +252,10 @@ export default function AccountsPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => window.location.href = `/dashboard/accounts/${account.id}/edit`}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    router.push(`/dashboard/accounts/${account.id}/edit`)
+                  }}
                 >
                   <Edit className="h-3 w-3" />
                 </Button>

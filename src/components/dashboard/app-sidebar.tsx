@@ -122,17 +122,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <SidebarMenu>
+        <SidebarMenu className="group-data-[collapsible=icon]:items-center">
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
+            <SidebarMenuButton size="lg" asChild tooltip="Kasefra">
               <a href="/dashboard">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                  <span className="font-bold text-lg">K</span>
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground group-data-[collapsible=icon]:size-6">
+                  <span className="font-bold text-lg group-data-[collapsible=icon]:text-sm">K</span>
                 </div>
-                <div className="grid flex-1 text-left text-sm leading-tight">
+                <span className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">Kasefra</span>
                   <span className="truncate text-xs text-muted-foreground">Personal Finance</span>
-                </div>
+                </span>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>

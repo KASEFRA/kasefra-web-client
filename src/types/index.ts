@@ -104,9 +104,6 @@ export interface Account {
   is_active: boolean
   current_balance: number // Cached balance (auto-synced from transactions/holdings/valuations)
   institution_name: string | null
-  account_number_masked: string | null
-  notes: string | null
-  icon_color: string | null
   created_at: string
   updated_at: string
 }
@@ -117,24 +114,43 @@ export interface AccountCreate {
   institution_name?: string | null
   currency?: string
   current_balance?: number // Initial balance for the account (defaults to 0)
-  account_number_masked?: string | null
-  notes?: string | null
-  icon_color?: string | null
 }
 
 export interface AccountUpdate {
   account_name?: string
   institution_name?: string | null
   currency?: string | null
-  account_number_masked?: string | null
-  notes?: string | null
-  icon_color?: string | null
   is_active?: boolean
 }
 
 export interface AccountListResponse {
   accounts: Account[]
   total_count: number
+}
+
+// ===== CHECKING ACCOUNT DETAILS TYPES =====
+
+export interface CheckingDetail {
+  id: string
+  account_id: string
+  user_id: string
+  overdraft_limit?: number | null
+  monthly_fee?: number | null
+  account_number_last_four?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CheckingDetailCreate {
+  overdraft_limit?: number | null
+  monthly_fee?: number | null
+  account_number_last_four?: string | null
+}
+
+export interface CheckingDetailUpdate {
+  overdraft_limit?: number | null
+  monthly_fee?: number | null
+  account_number_last_four?: string | null
 }
 
 // ===== BANK TRANSACTION TYPES =====

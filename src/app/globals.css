@@ -51,7 +51,7 @@
     --chart-4: 0 84% 65%;
     --chart-5: 210 40% 60%;
 
-    /* Sidebar */
+    /* Sidebar - Colors */
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 270 45% 25%;
     --sidebar-primary: 270 45% 43%;
@@ -60,6 +60,11 @@
     --sidebar-accent-foreground: 270 45% 25%;
     --sidebar-border: 240 6% 90%;
     --sidebar-ring: 270 45% 43%;
+
+    /* Sidebar - Dimensions */
+    --sidebar-width: 16rem;
+    --sidebar-width-icon: 3rem;
+    --sidebar-width-mobile: 18rem;
   }
 
   .dark {

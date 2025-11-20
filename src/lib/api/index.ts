@@ -14,3 +14,16 @@ export { budgetsApi } from './budgets'
 export { goalsApi } from './goals'
 export { networthApi } from './networth'
 export { apiClient } from './client'
+
+// Bills API - convenience wrapper around budgetsApi
+import { budgetsApi } from './budgets'
+
+export const billsApi = {
+  getAll: budgetsApi.getAllBills,
+  getById: budgetsApi.getBillById,
+  create: budgetsApi.createBill,
+  update: budgetsApi.updateBill,
+  delete: budgetsApi.deleteBill,
+  getUpcoming: budgetsApi.getUpcomingBills,
+  markPaid: budgetsApi.markBillPaid,
+}

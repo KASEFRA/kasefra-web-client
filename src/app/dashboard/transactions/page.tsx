@@ -6,10 +6,12 @@
  */
 
 import { useEffect, useState } from 'react'
+import { format } from 'date-fns'
+import { DateRange } from 'react-day-picker'
 import { bankApi, accountsApi, categoriesApi } from '@/lib/api'
 import type { BankTransaction, Account, Category, BankTransactionCreate, BankTransactionUpdate } from '@/types'
 import { TransactionType, CategoryType } from '@/types'
-import { Plus, Search, Edit, Trash2, X } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, X, Filter } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -32,6 +34,9 @@ import {
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { formatCurrency } from '@/lib/currency'
+import { DateRangePicker } from '@/components/ui/date-range-picker'
+import { TransactionSummary } from '@/components/dashboard/transaction-summary'
+import { Pagination } from '@/components/ui/pagination'
 
 export default function TransactionsPage() {
   const [accounts, setAccounts] = useState<Account[]>([])
@@ -45,6 +50,22 @@ export default function TransactionsPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [selectedType, setSelectedType] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [dateRange, setDateRange] = useState<DateRange | undefined>()
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(0)
+  const [pageSize, setPageSize] = useState(25)
+  const [totalCount, setTotalCount] = useState(0)
+
+  // Summary
+  const [summary, setSummary] = useState<{
+    total_income: number
+    total_expenses: number
+    net_income: number
+    income_count: number
+    expense_count: number
+  } | null>(null)
+  const [summaryLoading, setSummaryLoading] = useState(false)
 
   // Dialog states
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
@@ -68,7 +89,8 @@ export default function TransactionsPage() {
 
   useEffect(() => {
     loadTransactions()
-  }, [selectedAccount, selectedCategory, selectedType])
+    loadSummary()
+  }, [selectedAccount, selectedCategory, selectedType, dateRange, currentPage, pageSize])
 
   const loadInitialData = async () => {
     try {
@@ -91,21 +113,60 @@ export default function TransactionsPage() {
   const loadTransactions = async () => {
     try {
       setLoading(true)
-      const filters: any = {}
+      const filters: any = {
+        skip: currentPage * pageSize,
+        limit: pageSize,
+      }
 
       if (selectedAccount !== 'all') filters.account_id = selectedAccount
       if (selectedCategory !== 'all') filters.category_id = selectedCategory
       if (selectedType !== 'all') filters.transaction_type = selectedType
       if (searchQuery) filters.search_term = searchQuery
+      if (dateRange?.from) filters.start_date = format(dateRange.from, 'yyyy-MM-dd')
+      if (dateRange?.to) filters.end_date = format(dateRange.to, 'yyyy-MM-dd')
 
       const response = await bankApi.getAll(filters)
       setTransactions(response.transactions || [])
+      setTotalCount(response.total_count || 0)
     } catch (error) {
       console.error('Failed to load transactions:', error)
       setTransactions([])
+      setTotalCount(0)
     } finally {
       setLoading(false)
     }
+  }
+
+  const loadSummary = async () => {
+    try {
+      setSummaryLoading(true)
+      const filters: any = {}
+      
+      if (dateRange?.from) filters.start_date = format(dateRange.from, 'yyyy-MM-dd')
+      if (dateRange?.to) filters.end_date = format(dateRange.to, 'yyyy-MM-dd')
+
+      const summaryData = await bankApi.getOverallSummary(filters)
+      setSummary(summaryData)
+    } catch (error) {
+      console.error('Failed to load summary:', error)
+      setSummary(null)
+    } finally {
+      setSummaryLoading(false)
+    }
+  }
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+  }
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size)
+    setCurrentPage(0) // Reset to first page when changing page size
+  }
+
+  const handleDateRangeChange = (range: DateRange | undefined) => {
+    setDateRange(range)
+    setCurrentPage(0) // Reset to first page when changing date range
   }
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -323,7 +384,7 @@ export default function TransactionsPage() {
           id="notes"
           placeholder="Additional notes..."
           rows={3}
-          value={formData.notes}
+          value={formData.notes || ''}
           onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
         />
       </div>
@@ -352,12 +413,24 @@ export default function TransactionsPage() {
         </Button>
       </div>
 
+      {/* Transaction Summary */}
+      <TransactionSummary data={summary} loading={summaryLoading} />
+
       {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Filters</CardTitle>
+          <div className="flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            <CardTitle className="text-lg">Filters</CardTitle>
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {/* Date Range Picker */}
+          <div>
+            <Label className="mb-2 block">Date Range</Label>
+            <DateRangePicker value={dateRange} onChange={handleDateRangeChange} />
+          </div>
+
           <div className="grid gap-4 md:grid-cols-4">
             {/* Search */}
             <div className="relative">
@@ -492,6 +565,18 @@ export default function TransactionsPage() {
                 )
               })}
             </div>
+          )}
+
+          {/* Pagination */}
+          {!loading && transactions.length > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={Math.ceil(totalCount / pageSize)}
+              pageSize={pageSize}
+              totalItems={totalCount}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+            />
           )}
         </CardContent>
       </Card>
