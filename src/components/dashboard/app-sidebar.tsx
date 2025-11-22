@@ -15,6 +15,10 @@ import {
   Bitcoin,
   Briefcase,
   Home,
+  PiggyBank,
+  CreditCard,
+  Banknote,
+  CircleDollarSign,
 } from "lucide-react"
 
 import {
@@ -49,9 +53,29 @@ const navMainItems = [
         url: "/dashboard/accounts",
       },
       {
-        title: "Bank Accounts",
-        url: "/dashboard/accounts/bank",
+        title: "Checking",
+        url: "/dashboard/accounts/checking",
         icon: Landmark,
+      },
+      {
+        title: "Savings",
+        url: "/dashboard/accounts/savings",
+        icon: PiggyBank,
+      },
+      {
+        title: "Credit Cards",
+        url: "/dashboard/accounts/credit-cards",
+        icon: CreditCard,
+      },
+      {
+        title: "Cash",
+        url: "/dashboard/accounts/cash",
+        icon: Banknote,
+      },
+      {
+        title: "Loans",
+        url: "/dashboard/accounts/loans",
+        icon: CircleDollarSign,
       },
       {
         title: "Investments",

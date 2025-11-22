@@ -1,8 +1,8 @@
 'use client'
 
 /**
- * Crypto Accounts Page
- * Manage cryptocurrency wallets and holdings with table view
+ * Savings Accounts Page
+ * Manage savings bank accounts with table view
  */
 
 import { useEffect, useState } from 'react'
@@ -11,12 +11,12 @@ import { accountsApi } from '@/lib/api'
 import { formatCurrency } from '@/lib/currency'
 import type { Account } from '@/types'
 import { AccountType } from '@/types'
-import { Plus, Bitcoin, TrendingUp } from 'lucide-react'
+import { Plus, PiggyBank, Percent } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AccountsTable } from '@/components/accounts/accounts-table'
 
-export default function CryptoAccountsPage() {
+export default function SavingsAccountsPage() {
   const router = useRouter()
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
@@ -29,12 +29,12 @@ export default function CryptoAccountsPage() {
     try {
       setLoading(true)
       const response = await accountsApi.getAll()
-      const cryptoAccounts = response.accounts.filter(acc =>
-        acc.account_type === AccountType.CRYPTO
+      const savingsAccounts = response.accounts.filter(acc =>
+        acc.account_type === AccountType.SAVINGS
       )
-      setAccounts(cryptoAccounts)
+      setAccounts(savingsAccounts)
     } catch (error) {
-      console.error('Failed to load crypto accounts:', error)
+      console.error('Failed to load savings accounts:', error)
     } finally {
       setLoading(false)
     }
@@ -49,14 +49,14 @@ export default function CryptoAccountsPage() {
     }
   }
 
-  const totalValue = accounts.reduce((sum, acc) => sum + acc.current_balance, 0)
+  const totalSavings = accounts.reduce((sum, acc) => sum + acc.current_balance, 0)
 
   if (loading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
         <div className="text-center">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto"></div>
-          <p className="mt-4 text-sm text-muted-foreground">Loading crypto holdings...</p>
+          <p className="mt-4 text-sm text-muted-foreground">Loading savings accounts...</p>
         </div>
       </div>
     )
@@ -67,14 +67,14 @@ export default function CryptoAccountsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Cryptocurrency</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Savings Accounts</h1>
           <p className="text-muted-foreground mt-2">
-            Track your cryptocurrency portfolio and holdings
+            Track your savings and interest-earning accounts
           </p>
         </div>
-        <Button onClick={() => router.push('/dashboard/accounts/add?type=crypto')}>
+        <Button onClick={() => router.push('/dashboard/accounts/add?type=savings')}>
           <Plus className="h-4 w-4 mr-2" />
-          Add Crypto Account
+          Add Savings Account
         </Button>
       </div>
 
@@ -82,39 +82,41 @@ export default function CryptoAccountsPage() {
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Portfolio Value</CardTitle>
-            <Bitcoin className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Total Savings</CardTitle>
+            <PiggyBank className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalValue)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(totalSavings)}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              Across {accounts.length} wallet{accounts.length !== 1 ? 's' : ''}
+              Across {accounts.length} account{accounts.length !== 1 ? 's' : ''}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">24h Change</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-500">+0.00%</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Last 24 hours
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Wallets</CardTitle>
-            <Bitcoin className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Active Accounts</CardTitle>
+            <PiggyBank className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{accounts.length}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              Crypto wallets
+              Savings accounts
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Average Balance</CardTitle>
+            <Percent className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {accounts.length > 0 ? formatCurrency(totalSavings / accounts.length) : formatCurrency(0)}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Per account
             </p>
           </CardContent>
         </Card>
@@ -123,14 +125,14 @@ export default function CryptoAccountsPage() {
       {/* Accounts Table */}
       {accounts.length === 0 ? (
         <div className="rounded-lg border border-border bg-card p-12 text-center">
-          <Bitcoin className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No crypto wallets yet</h3>
+          <PiggyBank className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold mb-2">No savings accounts yet</h3>
           <p className="text-sm text-muted-foreground mb-6">
-            Start tracking your cryptocurrency by adding a wallet
+            Start saving by adding your first savings account
           </p>
-          <Button onClick={() => router.push('/dashboard/accounts/add?type=crypto')}>
+          <Button onClick={() => router.push('/dashboard/accounts/add?type=savings')}>
             <Plus className="h-4 w-4 mr-2" />
-            Add Crypto Wallet
+            Add Savings Account
           </Button>
         </div>
       ) : (

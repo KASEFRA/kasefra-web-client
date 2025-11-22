@@ -28,7 +28,7 @@ export const bankApi = {
     limit?: number
   }): Promise<BankTransactionListResponse> {
     const response = await apiClient.get<BankTransactionListResponse>(
-      '/accounts/bank/transactions',
+      '/accounts/transactions',
       { params: filters }
     )
     return response.data
@@ -39,7 +39,7 @@ export const bankApi = {
    */
   async getById(transactionId: string): Promise<BankTransaction> {
     const response = await apiClient.get<BankTransaction>(
-      `/accounts/bank/transactions/${transactionId}`
+      `/accounts/transactions/${transactionId}`
     )
     return response.data
   },
@@ -49,7 +49,7 @@ export const bankApi = {
    */
   async create(transactionData: BankTransactionCreate): Promise<BankTransaction> {
     const response = await apiClient.post<BankTransaction>(
-      '/accounts/bank/transactions',
+      '/accounts/transactions',
       transactionData
     )
     return response.data
@@ -63,7 +63,7 @@ export const bankApi = {
     transactionData: BankTransactionUpdate
   ): Promise<BankTransaction> {
     const response = await apiClient.put<BankTransaction>(
-      `/accounts/bank/transactions/${transactionId}`,
+      `/accounts/transactions/${transactionId}`,
       transactionData
     )
     return response.data
@@ -74,7 +74,7 @@ export const bankApi = {
    */
   async delete(transactionId: string): Promise<{ message: string }> {
     const response = await apiClient.delete<{ message: string}>(
-      `/accounts/bank/transactions/${transactionId}`
+      `/accounts/transactions/${transactionId}`
     )
     return response.data
   },
@@ -91,7 +91,7 @@ export const bankApi = {
     total_income: number
     total_expenses: number
   }> {
-    const response = await apiClient.get(`/accounts/bank/${accountId}/balance`)
+    const response = await apiClient.get(`/accounts/${accountId}/balance`)
     return response.data
   },
 
@@ -109,7 +109,7 @@ export const bankApi = {
     income_count: number
     expense_count: number
   }> {
-    const response = await apiClient.get(`/accounts/bank/${accountId}/summary`, {
+    const response = await apiClient.get(`/accounts/${accountId}/summary`, {
       params: { start_date: startDate, end_date: endDate },
     })
     return response.data
