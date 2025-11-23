@@ -15,11 +15,13 @@ import { Plus, CircleDollarSign, TrendingDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AccountsTable } from '@/components/accounts/accounts-table'
+import { CreateLoanDialog } from '@/components/accounts/create-loan-dialog'
 
 export default function LoansPage() {
   const router = useRouter()
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
+  const [showDialog, setShowDialog] = useState(false)
 
   useEffect(() => {
     loadAccounts()
@@ -72,11 +74,17 @@ export default function LoansPage() {
             Track your loans, mortgages, and other debt obligations
           </p>
         </div>
-        <Button onClick={() => router.push('/dashboard/accounts/add?type=loan')}>
+        <Button onClick={() => setShowDialog(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Add Loan
         </Button>
       </div>
+
+      {/* Loan Creation Dialog */}
+      <CreateLoanDialog
+        open={showDialog}
+        onOpenChange={setShowDialog}
+      />
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-3">
@@ -130,7 +138,7 @@ export default function LoansPage() {
           <p className="text-sm text-muted-foreground mb-6">
             Track your debt by adding a loan account
           </p>
-          <Button onClick={() => router.push('/dashboard/accounts/add?type=loan')}>
+          <Button onClick={() => setShowDialog(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Add Loan
           </Button>

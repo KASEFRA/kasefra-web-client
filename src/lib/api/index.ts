@@ -15,6 +15,13 @@ export { goalsApi } from './goals'
 export { networthApi } from './networth'
 export { apiClient } from './client'
 
+// Account type-specific detail APIs
+export { checkingApi } from './checking'
+export { savingsApi } from './savings'
+export { creditCardApi } from './credit-card'
+export { cashApi } from './cash'
+export { loanApi } from './loan'
+
 // Bills API - convenience wrapper around budgetsApi
 import { budgetsApi } from './budgets'
 

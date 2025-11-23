@@ -104,12 +104,12 @@ export function BudgetProgressCard({ budgetId, showCategories = true }: BudgetPr
               {formatCurrency(progress.total_spent)} / {formatCurrency(progress.total_allocated)}
             </span>
           </div>
-          <Progress 
-            value={Math.min(progress.percentage_used, 100)} 
+          <Progress
+            value={Math.min(Number(progress.percentage_used || 0), 100)}
             className={progress.is_over_budget ? 'bg-red-100 [&>div]:bg-red-600' : ''}
           />
           <div className="flex justify-between items-center text-xs text-muted-foreground">
-            <span>{progress.percentage_used.toFixed(1)}% used</span>
+            <span>{Number(progress.percentage_used || 0).toFixed(1)}% used</span>
             <span className={progress.total_remaining < 0 ? 'text-red-600 font-semibold' : 'text-green-600'}>
               {formatCurrency(Math.abs(progress.total_remaining))} {progress.total_remaining < 0 ? 'over' : 'remaining'}
             </span>
@@ -179,9 +179,9 @@ interface CategoryProgressItemProps {
 }
 
 function CategoryProgressItem({ category }: CategoryProgressItemProps) {
-  const percentUsed = category.percentage_used || 0
+  const percentUsed = Number(category.percentage_used || 0)
   const isOverBudget = category.is_over_budget || false
-  const isNearLimit = !isOverBudget && percentUsed >= category.alert_threshold
+  const isNearLimit = !isOverBudget && percentUsed >= Number(category.alert_threshold || 0)
 
   return (
     <div className="space-y-2">

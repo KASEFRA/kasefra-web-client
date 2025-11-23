@@ -15,11 +15,13 @@ import { Plus, CreditCard, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AccountsTable } from '@/components/accounts/accounts-table'
+import { CreateCreditCardDialog } from '@/components/accounts/create-credit-card-dialog'
 
 export default function CreditCardsPage() {
   const router = useRouter()
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
+  const [showDialog, setShowDialog] = useState(false)
 
   useEffect(() => {
     loadAccounts()
@@ -72,11 +74,17 @@ export default function CreditCardsPage() {
             Manage your credit card accounts and track spending
           </p>
         </div>
-        <Button onClick={() => router.push('/dashboard/accounts/add?type=credit_card')}>
+        <Button onClick={() => setShowDialog(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Add Credit Card
         </Button>
       </div>
+
+      {/* Credit Card Creation Dialog */}
+      <CreateCreditCardDialog
+        open={showDialog}
+        onOpenChange={setShowDialog}
+      />
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-3">
@@ -130,7 +138,7 @@ export default function CreditCardsPage() {
           <p className="text-sm text-muted-foreground mb-6">
             Track your credit card spending by adding a card
           </p>
-          <Button onClick={() => router.push('/dashboard/accounts/add?type=credit_card')}>
+          <Button onClick={() => setShowDialog(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Add Credit Card
           </Button>

@@ -15,11 +15,13 @@ import { Plus, TrendingUp, DollarSign } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AccountsTable } from '@/components/accounts/accounts-table'
+import { CreateInvestmentDialog } from '@/components/accounts/create-investment-dialog'
 
 export default function InvestmentsPage() {
   const router = useRouter()
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
+  const [showDialog, setShowDialog] = useState(false)
 
   useEffect(() => {
     loadAccounts()
@@ -72,11 +74,17 @@ export default function InvestmentsPage() {
             Manage your investment portfolio and track performance
           </p>
         </div>
-        <Button onClick={() => router.push('/dashboard/accounts/add?type=investment')}>
+        <Button onClick={() => setShowDialog(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Add Investment Account
         </Button>
       </div>
+
+      {/* Investment Account Creation Dialog */}
+      <CreateInvestmentDialog
+        open={showDialog}
+        onOpenChange={setShowDialog}
+      />
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-3">
@@ -128,7 +136,7 @@ export default function InvestmentsPage() {
           <p className="text-sm text-muted-foreground mb-6">
             Start building your investment portfolio by adding an account
           </p>
-          <Button onClick={() => router.push('/dashboard/accounts/add?type=investment')}>
+          <Button onClick={() => setShowDialog(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Add Investment Account
           </Button>

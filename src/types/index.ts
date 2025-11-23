@@ -93,6 +93,14 @@ export enum GoalStatus {
   CANCELLED = 'cancelled',
 }
 
+export enum LoanType {
+  MORTGAGE = 'mortgage',
+  AUTO = 'auto',
+  PERSONAL = 'personal',
+  STUDENT = 'student',
+  OTHER = 'other',
+}
+
 // ===== ACCOUNT TYPES =====
 
 export interface Account {
@@ -151,6 +159,112 @@ export interface CheckingDetailUpdate {
   overdraft_limit?: number | null
   monthly_fee?: number | null
   account_number_last_four?: string | null
+}
+
+// ===== SAVINGS ACCOUNT DETAILS TYPES =====
+
+export interface SavingsDetail {
+  id: string
+  account_id: string
+  user_id: string
+  interest_rate?: number | null
+  goal_name?: string | null
+  goal_target_amount?: number | null
+  created_at: string
+  updated_at: string
+}
+
+export interface SavingsDetailCreate {
+  interest_rate?: number | null
+  goal_name?: string | null
+  goal_target_amount?: number | null
+}
+
+export interface SavingsDetailUpdate {
+  interest_rate?: number | null
+  goal_name?: string | null
+  goal_target_amount?: number | null
+}
+
+// ===== CREDIT CARD ACCOUNT DETAILS TYPES =====
+
+export interface CreditCardDetail {
+  id: string
+  account_id: string
+  user_id: string
+  credit_limit?: number | null
+  apr?: number | null
+  payment_due_day?: number | null
+  card_last_four?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CreditCardDetailCreate {
+  credit_limit?: number | null
+  apr?: number | null
+  payment_due_day?: number | null
+  card_last_four?: string | null
+}
+
+export interface CreditCardDetailUpdate {
+  credit_limit?: number | null
+  apr?: number | null
+  payment_due_day?: number | null
+  card_last_four?: string | null
+}
+
+// ===== CASH ACCOUNT DETAILS TYPES =====
+
+export interface CashDetail {
+  id: string
+  account_id: string
+  user_id: string
+  location?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CashDetailCreate {
+  location?: string | null
+}
+
+export interface CashDetailUpdate {
+  location?: string | null
+}
+
+// ===== LOAN ACCOUNT DETAILS TYPES =====
+
+export interface LoanDetail {
+  id: string
+  account_id: string
+  user_id: string
+  loan_type: LoanType
+  principal_amount: number
+  interest_rate: number
+  term_months: number
+  start_date: string
+  monthly_payment: number
+  created_at: string
+  updated_at: string
+}
+
+export interface LoanDetailCreate {
+  loan_type: LoanType
+  principal_amount: number
+  interest_rate: number
+  term_months: number
+  start_date: string
+  monthly_payment: number
+}
+
+export interface LoanDetailUpdate {
+  loan_type?: LoanType
+  principal_amount?: number
+  interest_rate?: number
+  term_months?: number
+  start_date?: string
+  monthly_payment?: number
 }
 
 // ===== BANK TRANSACTION TYPES =====

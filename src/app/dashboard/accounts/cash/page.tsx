@@ -15,11 +15,13 @@ import { Plus, Wallet, Banknote } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AccountsTable } from '@/components/accounts/accounts-table'
+import { CreateCashAccountDialog } from '@/components/accounts/create-cash-account-dialog'
 
 export default function CashAccountsPage() {
   const router = useRouter()
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
+  const [showDialog, setShowDialog] = useState(false)
 
   useEffect(() => {
     loadAccounts()
@@ -72,11 +74,17 @@ export default function CashAccountsPage() {
             Track your physical cash holdings
           </p>
         </div>
-        <Button onClick={() => router.push('/dashboard/accounts/add?type=cash')}>
+        <Button onClick={() => setShowDialog(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Add Cash Account
         </Button>
       </div>
+
+      {/* Cash Account Creation Dialog */}
+      <CreateCashAccountDialog
+        open={showDialog}
+        onOpenChange={setShowDialog}
+      />
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-3">
@@ -130,7 +138,7 @@ export default function CashAccountsPage() {
           <p className="text-sm text-muted-foreground mb-6">
             Start tracking your physical cash by adding a cash account
           </p>
-          <Button onClick={() => router.push('/dashboard/accounts/add?type=cash')}>
+          <Button onClick={() => setShowDialog(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Add Cash Account
           </Button>

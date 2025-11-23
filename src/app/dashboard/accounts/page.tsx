@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { accountsApi } from '@/lib/api'
 import type { Account } from '@/types'
-import { Plus, Landmark, Search, X } from 'lucide-react'
+import { Plus, Search, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -19,7 +19,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import { CreateCheckingAccountDialog } from '@/components/accounts/create-checking-account-dialog'
+import { AccountTypeDropdown } from '@/components/accounts/account-type-dropdown'
 import { AccountsTable } from '@/components/accounts/accounts-table'
 
 // Available account types for filtering (must match backend enum values)
@@ -42,7 +42,6 @@ export default function AccountsPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedTypes, setSelectedTypes] = useState<string[]>([])
-  const [showCheckingDialog, setShowCheckingDialog] = useState(false)
   const [filterPopoverOpen, setFilterPopoverOpen] = useState(false)
 
   useEffect(() => {
@@ -135,26 +134,8 @@ export default function AccountsPage() {
             Manage all your financial accounts
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setShowCheckingDialog(true)}
-          >
-            <Landmark className="mr-2 h-4 w-4" />
-            New Checking
-          </Button>
-          <Button onClick={() => router.push('/dashboard/accounts/add')}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Account
-          </Button>
-        </div>
+        <AccountTypeDropdown />
       </div>
-
-      {/* Checking Account Creation Dialog */}
-      <CreateCheckingAccountDialog
-        open={showCheckingDialog}
-        onOpenChange={setShowCheckingDialog}
-      />
 
       {/* Search and Filters */}
       <div className="space-y-3">
@@ -295,13 +276,9 @@ export default function AccountsPage() {
             <p className="mt-2 text-sm text-muted-foreground">
               Get started by adding your first financial account
             </p>
-            <Button
-              className="mt-4"
-              onClick={() => router.push('/dashboard/accounts/add')}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Account
-            </Button>
+            <div className="mt-4">
+              <AccountTypeDropdown />
+            </div>
           </div>
         ) : (
           <AccountsTable

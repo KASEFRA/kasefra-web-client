@@ -15,11 +15,13 @@ import { Plus, PiggyBank, Percent } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AccountsTable } from '@/components/accounts/accounts-table'
+import { CreateSavingsAccountDialog } from '@/components/accounts/create-savings-account-dialog'
 
 export default function SavingsAccountsPage() {
   const router = useRouter()
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
+  const [showDialog, setShowDialog] = useState(false)
 
   useEffect(() => {
     loadAccounts()
@@ -72,11 +74,17 @@ export default function SavingsAccountsPage() {
             Track your savings and interest-earning accounts
           </p>
         </div>
-        <Button onClick={() => router.push('/dashboard/accounts/add?type=savings')}>
+        <Button onClick={() => setShowDialog(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Add Savings Account
         </Button>
       </div>
+
+      {/* Savings Account Creation Dialog */}
+      <CreateSavingsAccountDialog
+        open={showDialog}
+        onOpenChange={setShowDialog}
+      />
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-3">
@@ -130,7 +138,7 @@ export default function SavingsAccountsPage() {
           <p className="text-sm text-muted-foreground mb-6">
             Start saving by adding your first savings account
           </p>
-          <Button onClick={() => router.push('/dashboard/accounts/add?type=savings')}>
+          <Button onClick={() => setShowDialog(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Add Savings Account
           </Button>

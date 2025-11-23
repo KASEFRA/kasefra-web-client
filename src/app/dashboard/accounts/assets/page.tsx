@@ -16,11 +16,22 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AccountsTable } from '@/components/accounts/accounts-table'
 import { toast } from 'sonner'
+import { CreateRealEstateDialog } from '@/components/accounts/create-real-estate-dialog'
+import { CreateOtherAssetDialog } from '@/components/accounts/create-other-asset-dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+
+type AssetDialogType = 'real-estate' | 'other-asset' | null
 
 export default function AssetsPage() {
   const router = useRouter()
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loading, setLoading] = useState(true)
+  const [openDialog, setOpenDialog] = useState<AssetDialogType>(null)
 
   useEffect(() => {
     loadAccounts()
@@ -83,11 +94,35 @@ export default function AssetsPage() {
             Track real estate, vehicles, and other valuable assets
           </p>
         </div>
-        <Button onClick={() => router.push('/dashboard/accounts/add?type=other_asset')}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Asset
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Asset
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => setOpenDialog('real-estate')}>
+              <Home className="mr-2 h-4 w-4" />
+              Real Estate
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setOpenDialog('other-asset')}>
+              <Package className="mr-2 h-4 w-4" />
+              Other Asset
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
+
+      {/* Asset Creation Dialogs */}
+      <CreateRealEstateDialog
+        open={openDialog === 'real-estate'}
+        onOpenChange={(open) => !open && setOpenDialog(null)}
+      />
+      <CreateOtherAssetDialog
+        open={openDialog === 'other-asset'}
+        onOpenChange={(open) => !open && setOpenDialog(null)}
+      />
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-3">
@@ -139,10 +174,24 @@ export default function AssetsPage() {
           <p className="text-sm text-muted-foreground mb-6">
             Start tracking your physical assets like property, vehicles, and valuables
           </p>
-          <Button onClick={() => router.push('/dashboard/accounts/add?type=other_asset')}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Your First Asset
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Your First Asset
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setOpenDialog('real-estate')}>
+                <Home className="mr-2 h-4 w-4" />
+                Real Estate
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setOpenDialog('other-asset')}>
+                <Package className="mr-2 h-4 w-4" />
+                Other Asset
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       ) : (
         <AccountsTable

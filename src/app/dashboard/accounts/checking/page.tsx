@@ -84,7 +84,6 @@ export default function CheckingAccountsPage() {
       <CreateCheckingAccountDialog
         open={showCheckingDialog}
         onOpenChange={setShowCheckingDialog}
-        onSuccess={loadAccounts}
       />
 
       {/* Summary Cards */}
