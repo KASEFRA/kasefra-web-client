@@ -12,6 +12,9 @@ import type { Budget, BudgetProgress } from '@/types'
 import { Button } from '@/components/ui/button'
 import { ChevronLeft, Edit, Trash2, Loader2 } from 'lucide-react'
 import { BudgetProgressCard } from '@/components/budgets/budget-progress-card'
+import { BudgetAnalytics } from '@/components/budgets/budget-analytics'
+import { BudgetAlertsPanel } from '@/components/budgets/budget-alerts-panel'
+import { BillsIntegrationCard } from '@/components/budgets/bills-integration-card'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,6 +33,7 @@ export default function BudgetDetailPage() {
   const budgetId = params.id as string
 
   const [budget, setBudget] = useState<Budget | null>(null)
+  const [budgetProgress, setBudgetProgress] = useState<BudgetProgress | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -37,16 +41,23 @@ export default function BudgetDetailPage() {
 
   useEffect(() => {
     if (budgetId) {
-      loadBudget()
+      loadBudgetData()
     }
   }, [budgetId])
 
-  const loadBudget = async () => {
+  const loadBudgetData = async () => {
     try {
       setLoading(true)
       setError(null)
-      const budgetData = await budgetsApi.getById(budgetId)
+
+      // Load budget and progress data in parallel
+      const [budgetData, progressData] = await Promise.all([
+        budgetsApi.getById(budgetId),
+        budgetsApi.getProgress(budgetId),
+      ])
+
       setBudget(budgetData)
+      setBudgetProgress(progressData)
     } catch (err: any) {
       console.error('Failed to load budget:', err)
       setError(err.response?.data?.detail || 'Failed to load budget')
@@ -86,15 +97,6 @@ export default function BudgetDetailPage() {
     })
   }
 
-  const getBudgetTypeName = (type: string) => {
-    const typeMap: Record<string, string> = {
-      fixed: 'Fixed Budget',
-      flexible: 'Flexible Budget',
-      zero_based: 'Zero-Based Budget',
-    }
-    return typeMap[type] || type
-  }
-
   const getPeriodName = (period: string) => {
     const periodMap: Record<string, string> = {
       weekly: 'Weekly',
@@ -122,7 +124,7 @@ export default function BudgetDetailPage() {
     )
   }
 
-  if (error || !budget) {
+  if (error || !budget || !budgetProgress) {
     return (
       <div className="space-y-6">
         <Button variant="ghost" onClick={() => router.push('/dashboard/budgets')}>
@@ -156,7 +158,7 @@ export default function BudgetDetailPage() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">{budget.name}</h1>
             <p className="text-muted-foreground">
-              {getBudgetTypeName(budget.budget_type)} • {getPeriodName(budget.period)}
+              {getPeriodName(budget.period)} Budget
             </p>
           </div>
         </div>
@@ -204,13 +206,22 @@ export default function BudgetDetailPage() {
       {/* Budget Progress */}
       <BudgetProgressCard budgetId={budgetId} showCategories={true} />
 
+      {/* Analytics */}
+      <BudgetAnalytics budgetProgress={budgetProgress} />
+
+      {/* Alerts and Bills */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <BudgetAlertsPanel budgetProgress={budgetProgress} />
+        <BillsIntegrationCard budgetProgress={budgetProgress} />
+      </div>
+
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Budget</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <strong>{budget.name}</strong>? 
+              Are you sure you want to delete <strong>{budget.name}</strong>?
               This action cannot be undone. All budget categories and allocations will be permanently removed.
             </AlertDialogDescription>
           </AlertDialogHeader>

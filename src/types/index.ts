@@ -53,12 +53,6 @@ export enum ValuationMethod {
   DEPRECIATION_CALC = 'depreciation_calc',
 }
 
-export enum BudgetType {
-  FIXED = 'fixed',
-  FLEXIBLE = 'flexible',
-  ZERO_BASED = 'zero_based',
-}
-
 export enum BudgetPeriod {
   WEEKLY = 'weekly',
   MONTHLY = 'monthly',
@@ -508,7 +502,6 @@ export interface Budget {
   id: string
   user_id: string
   name: string
-  budget_type: BudgetType
   period: BudgetPeriod
   start_date: string
   end_date: string | null
@@ -521,7 +514,6 @@ export interface Budget {
 
 export interface BudgetCreate {
   name: string
-  budget_type: BudgetType
   period: BudgetPeriod
   start_date: string
   end_date?: string | null
