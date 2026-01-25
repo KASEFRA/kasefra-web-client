@@ -26,8 +26,29 @@ export const categoriesApi = {
   async getHierarchy(): Promise<{
     categories: Array<Category & { children?: Category[] }>
   }> {
-    const response = await apiClient.get('/categories?hierarchy=true')
-    return response.data
+    const response = await apiClient.get<CategoryListResponse>('/categories')
+    const categories = response.data.categories
+    const categoryMap = new Map<string, Category & { children?: Category[] }>()
+
+    categories.forEach((category) => {
+      categoryMap.set(category.id, { ...category, children: [] })
+    })
+
+    const roots: Array<Category & { children?: Category[] }> = []
+    categoryMap.forEach((category) => {
+      if (category.parent_category_id) {
+        const parent = categoryMap.get(category.parent_category_id)
+        if (parent) {
+          parent.children?.push(category)
+        } else {
+          roots.push(category)
+        }
+      } else {
+        roots.push(category)
+      }
+    })
+
+    return { categories: roots }
   },
 
   /**
@@ -66,16 +87,18 @@ export const categoriesApi = {
    * Get system (predefined) categories
    */
   async getSystemCategories(): Promise<CategoryListResponse> {
-    const response = await apiClient.get<CategoryListResponse>('/categories?is_system=true')
-    return response.data
+    const response = await apiClient.get<CategoryListResponse>('/categories')
+    const categories = response.data.categories.filter((category) => category.is_default)
+    return { categories, total_count: categories.length }
   },
 
   /**
    * Get user-created categories
    */
   async getUserCategories(): Promise<CategoryListResponse> {
-    const response = await apiClient.get<CategoryListResponse>('/categories?is_system=false')
-    return response.data
+    const response = await apiClient.get<CategoryListResponse>('/categories')
+    const categories = response.data.categories.filter((category) => !category.is_default)
+    return { categories, total_count: categories.length }
   },
 
   /**

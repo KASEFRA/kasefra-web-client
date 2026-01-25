@@ -192,7 +192,7 @@ export default function BudgetEditPage() {
       <CategoryAllocationManager
         existingAllocations={budgetCategories}
         onChange={setAllocations}
-        autoIncludeAll={false}
+        autoIncludeAll={true}
         disabled={isSubmitting}
       />
 

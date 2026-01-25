@@ -6,12 +6,14 @@
  */
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { categoriesApi } from '@/lib/api'
 import type { Category } from '@/types'
 import { Plus, Edit, Trash2, Folder, Tag } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export default function CategoriesPage() {
+  const router = useRouter()
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'system' | 'custom'>('all')
@@ -54,11 +56,11 @@ export default function CategoriesPage() {
   }
 
   const getParentCategories = () => {
-    return categories.filter(cat => !cat.parent_id)
+    return categories.filter((cat) => !cat.parent_category_id)
   }
 
   const getChildCategories = (parentId: string) => {
-    return categories.filter(cat => cat.parent_id === parentId)
+    return categories.filter((cat) => cat.parent_category_id === parentId)
   }
 
   if (loading) {
@@ -82,7 +84,7 @@ export default function CategoriesPage() {
             Organize your transactions with categories
           </p>
         </div>
-        <Button onClick={() => window.location.href = '/dashboard/categories/new'}>
+        <Button onClick={() => router.push('/dashboard/categories/new')}>
           <Plus className="mr-2 h-4 w-4" />
           New Category
         </Button>
@@ -132,7 +134,7 @@ export default function CategoriesPage() {
           </p>
           <Button
             className="mt-4"
-            onClick={() => window.location.href = '/dashboard/categories/new'}
+            onClick={() => router.push('/dashboard/categories/new')}
           >
             <Plus className="mr-2 h-4 w-4" />
             New Category
@@ -164,28 +166,23 @@ export default function CategoriesPage() {
                       <h3 className="font-semibold text-foreground">
                         {parentCategory.name}
                       </h3>
-                      {parentCategory.is_system && (
+                      {parentCategory.is_default && (
                         <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-800">
                           System
                         </span>
                       )}
                     </div>
-                    {parentCategory.description && (
-                      <p className="text-sm text-muted-foreground">
-                        {parentCategory.description}
-                      </p>
-                    )}
                   </div>
                 </div>
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => window.location.href = `/dashboard/categories/${parentCategory.id}/edit`}
+                    onClick={() => router.push(`/dashboard/categories/${parentCategory.id}/edit`)}
                   >
                     <Edit className="h-3 w-3" />
                   </Button>
-                  {!parentCategory.is_system && (
+                  {!parentCategory.is_default && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -220,22 +217,17 @@ export default function CategoriesPage() {
                           <p className="text-sm font-medium text-foreground">
                             {childCategory.name}
                           </p>
-                          {childCategory.description && (
-                            <p className="text-xs text-muted-foreground">
-                              {childCategory.description}
-                            </p>
-                          )}
                         </div>
                       </div>
                       <div className="flex gap-2">
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => window.location.href = `/dashboard/categories/${childCategory.id}/edit`}
+                          onClick={() => router.push(`/dashboard/categories/${childCategory.id}/edit`)}
                         >
                           <Edit className="h-3 w-3" />
                         </Button>
-                        {!childCategory.is_system && (
+                        {!childCategory.is_default && (
                           <Button
                             variant="outline"
                             size="sm"

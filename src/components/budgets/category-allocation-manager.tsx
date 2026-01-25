@@ -5,7 +5,7 @@
  * Manages category allocations for a budget (create/edit modes)
  */
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { categoriesApi } from '@/lib/api'
 import { CategoryType } from '@/types'
 import type { Category, BudgetCategory } from '@/types'
@@ -38,6 +38,8 @@ export function CategoryAllocationManager({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const initializedRef = useRef(false)
+  const lastExistingCountRef = useRef(0)
 
   // Load expense categories on mount
   useEffect(() => {
@@ -46,19 +48,35 @@ export function CategoryAllocationManager({
 
   // Initialize allocations when categories or existing allocations change
   useEffect(() => {
-    if (categories.length > 0) {
-      initializeAllocations()
+    if (categories.length === 0) return
+    if (existingAllocations.length > 0) {
+      if (
+        !initializedRef.current ||
+        existingAllocations.length !== lastExistingCountRef.current
+      ) {
+        initializeAllocations()
+        initializedRef.current = true
+        lastExistingCountRef.current = existingAllocations.length
+      }
+      return
     }
-  }, [categories, existingAllocations])
+    if (!initializedRef.current) {
+      initializeAllocations()
+      initializedRef.current = true
+    }
+  }, [categories, existingAllocations, autoIncludeAll])
 
   const loadCategories = async () => {
     try {
       setLoading(true)
       setError(null)
       const response = await categoriesApi.getAll()
-      // Filter expense categories only
+      // Use only root expense categories for main budgets
       const expenseCategories = response.categories.filter(
-        (cat) => cat.category_type === CategoryType.EXPENSE && cat.is_active
+        (cat) =>
+          cat.category_type === CategoryType.EXPENSE &&
+          cat.is_active &&
+          cat.parent_category_id === null
       )
       setCategories(expenseCategories)
     } catch (err: any) {
@@ -70,9 +88,11 @@ export function CategoryAllocationManager({
   }
 
   const initializeAllocations = () => {
+    let allocs: CategoryAllocation[] = []
+    
     if (existingAllocations.length > 0) {
       // Edit mode: Use existing allocations
-      const allocs: CategoryAllocation[] = existingAllocations.map((bc) => {
+      allocs = existingAllocations.map((bc) => {
         const category = categories.find((c) => c.id === bc.category_id)
         return {
           category_id: bc.category_id,
@@ -84,11 +104,27 @@ export function CategoryAllocationManager({
           alert_enabled: bc.alert_enabled,
         }
       })
-      setAllocations(allocs)
-      onChange(allocs)
+      if (autoIncludeAll) {
+        const existingIds = new Set(allocs.map((alloc) => alloc.category_id))
+        const missing = categories.filter((cat) => !existingIds.has(cat.id))
+        if (missing.length > 0) {
+          allocs = [
+            ...allocs,
+            ...missing.map((cat) => ({
+              category_id: cat.id,
+              category_name: cat.name,
+              category_icon: cat.icon,
+              category_color: cat.color,
+              allocated_amount: 0,
+              alert_threshold: 0.8,
+              alert_enabled: true,
+            })),
+          ]
+        }
+      }
     } else if (autoIncludeAll) {
       // Create mode: Auto-include all categories with $0
-      const allocs: CategoryAllocation[] = categories.map((cat) => ({
+      allocs = categories.map((cat) => ({
         category_id: cat.id,
         category_name: cat.name,
         category_icon: cat.icon,
@@ -97,8 +133,12 @@ export function CategoryAllocationManager({
         alert_threshold: 0.8,
         alert_enabled: true,
       }))
+    }
+    
+    if (allocs.length > 0) {
       setAllocations(allocs)
-      onChange(allocs)
+      // Only call onChange once during initialization
+      setTimeout(() => onChange(allocs), 0)
     }
   }
 

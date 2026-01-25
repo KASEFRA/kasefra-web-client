@@ -7,7 +7,6 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { formatCurrency } from '@/lib/currency'
 import type { Budget } from '@/types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -15,7 +14,6 @@ import { Button } from '@/components/ui/button'
 import { 
   Calendar, 
   TrendingUp, 
-  AlertCircle, 
   Eye, 
   Edit, 
   Trash2,
@@ -44,15 +42,6 @@ export function BudgetList({ budgets, onEdit, onDelete, onView }: BudgetListProp
       day: 'numeric',
       year: 'numeric',
     })
-  }
-
-  const getBudgetTypeName = (type: string) => {
-    const typeMap: Record<string, string> = {
-      fixed: 'Fixed',
-      flexible: 'Flexible',
-      zero_based: 'Zero-Based',
-    }
-    return typeMap[type] || type
   }
 
   const getPeriodName = (period: string) => {
@@ -164,7 +153,6 @@ export function BudgetList({ budgets, onEdit, onDelete, onView }: BudgetListProp
                 {budget.is_active ? 'Active' : 'Inactive'}
               </Badge>
               <Badge variant="outline">{getPeriodName(budget.period)}</Badge>
-              <Badge variant="outline">{getBudgetTypeName(budget.budget_type)}</Badge>
             </div>
 
             {/* Features */}

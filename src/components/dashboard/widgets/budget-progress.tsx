@@ -57,12 +57,6 @@ export function BudgetProgressWidget() {
     }
   }
 
-  const getProgressColor = (percentUsed: number, alertThreshold: number) => {
-    if (percentUsed >= 100) return 'bg-red-500'
-    if (percentUsed >= alertThreshold) return 'bg-yellow-500'
-    return 'bg-green-500'
-  }
-
   const getProgressTextColor = (percentUsed: number, alertThreshold: number) => {
     if (percentUsed >= 100) return 'text-red-600 dark:text-red-400'
     if (percentUsed >= alertThreshold) return 'text-yellow-600 dark:text-yellow-400'
@@ -118,8 +112,10 @@ export function BudgetProgressWidget() {
     0
   )
   const totalSpent = progress.categories.reduce((sum, cat) => sum + cat.spent_amount, 0)
-  const overallPercent = totalAllocated > 0 ? (totalSpent / totalAllocated) * 100 : 0
+  const hasLimits = totalAllocated > 0
+  const overallPercent = hasLimits ? (totalSpent / totalAllocated) * 100 : 0
   const remaining = totalAllocated - totalSpent
+  const totalSpentAmount = totalSpent
 
   // Get top 3 categories by spending
   const topCategories = [...progress.categories]
@@ -128,7 +124,7 @@ export function BudgetProgressWidget() {
 
   // Check for over-budget categories
   const overBudgetCount = progress.categories.filter(
-    (cat) => cat.spent_amount > cat.allocated_amount
+    (cat) => cat.allocated_amount > 0 && cat.spent_amount > cat.allocated_amount
   ).length
 
   return (
@@ -154,18 +150,36 @@ export function BudgetProgressWidget() {
         <div>
           <div className="flex justify-between items-center mb-2">
             <span className="text-sm font-medium">Overall Progress</span>
-            <span className={`text-sm font-semibold ${getProgressTextColor(overallPercent, 80)}`}>
-              {overallPercent.toFixed(1)}%
-            </span>
+            {hasLimits ? (
+              <span className={`text-sm font-semibold ${getProgressTextColor(overallPercent, 80)}`}>
+                {overallPercent.toFixed(1)}%
+              </span>
+            ) : (
+              <span className="text-sm text-muted-foreground">No limits set</span>
+            )}
           </div>
-          <Progress value={Math.min(overallPercent, 100)} className="h-2" />
+          <Progress
+            value={hasLimits ? Math.min(overallPercent, 100) : 100}
+            className={hasLimits ? 'h-2' : 'h-2 bg-muted [&>div]:bg-muted-foreground/30'}
+          />
           <div className="flex justify-between items-center mt-2">
-            <span className="text-xs text-muted-foreground">
-              {formatCurrency(totalSpent)} spent
-            </span>
-            <span className="text-xs text-muted-foreground">
-              {formatCurrency(remaining)} remaining
-            </span>
+            {hasLimits ? (
+              <>
+                <span className="text-xs text-muted-foreground">
+                  {formatCurrency(totalSpent)} spent
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {formatCurrency(remaining)} remaining
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="text-xs text-muted-foreground">
+                  {formatCurrency(totalSpent)} spent
+                </span>
+                <span className="text-xs text-muted-foreground">No limits yet</span>
+              </>
+            )}
           </div>
         </div>
 
@@ -189,10 +203,15 @@ export function BudgetProgressWidget() {
 
           {topCategories.map((cat) => {
             const category = categories.get(cat.category_id)
-            const percentUsed =
-              cat.allocated_amount > 0 ? (cat.spent_amount / cat.allocated_amount) * 100 : 0
-            const isOverBudget = percentUsed >= 100
-            const isNearLimit = percentUsed >= cat.alert_threshold
+            const hasAllocation = cat.allocated_amount > 0
+            const percentUsed = hasAllocation
+              ? (cat.spent_amount / cat.allocated_amount) * 100
+              : totalSpentAmount > 0
+              ? (cat.spent_amount / totalSpentAmount) * 100
+              : 0
+            const isOverBudget = hasAllocation && percentUsed >= 100
+            const isNearLimit =
+              hasAllocation && percentUsed >= cat.alert_threshold * 100
 
             return (
               <div key={cat.category_id} className="space-y-2">
@@ -211,8 +230,19 @@ export function BudgetProgressWidget() {
                         Near Limit
                       </Badge>
                     )}
+                    {!hasAllocation && (
+                      <Badge variant="outline" className="text-xs">
+                        No Limit
+                      </Badge>
+                    )}
                   </div>
-                  <span className={`text-sm ${getProgressTextColor(percentUsed, cat.alert_threshold)}`}>
+                  <span
+                    className={`text-sm ${
+                      hasAllocation
+                        ? getProgressTextColor(percentUsed, cat.alert_threshold * 100)
+                        : 'text-muted-foreground'
+                    }`}
+                  >
                     {formatCurrency(cat.spent_amount)}
                   </span>
                 </div>
@@ -223,12 +253,14 @@ export function BudgetProgressWidget() {
                       ? '[&>div]:bg-red-500'
                       : isNearLimit
                       ? '[&>div]:bg-yellow-500'
+                      : !hasAllocation
+                      ? 'bg-muted [&>div]:bg-muted-foreground/30'
                       : '[&>div]:bg-green-500'
                   }`}
                 />
                 <div className="flex justify-between">
                   <span className="text-xs text-muted-foreground">
-                    {formatCurrency(cat.allocated_amount)} budgeted
+                    {hasAllocation ? `${formatCurrency(cat.allocated_amount)} budgeted` : 'No limit'}
                   </span>
                   <span className="text-xs text-muted-foreground">{percentUsed.toFixed(0)}%</span>
                 </div>

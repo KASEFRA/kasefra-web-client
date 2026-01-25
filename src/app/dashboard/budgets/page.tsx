@@ -102,13 +102,27 @@ export default function BudgetsPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Budgets</h1>
           <p className="text-muted-foreground">
-            Track your spending and stay on budget
+            Monthly budgets are created automatically. Set limits to start tracking.
           </p>
         </div>
-        <Button onClick={() => router.push('/dashboard/budgets/new')}>
-          <Plus className="mr-2 h-4 w-4" />
-          Create Budget
-        </Button>
+        <div className="flex items-center gap-2">
+          {currentBudget ? (
+            <>
+              <Button onClick={() => router.push(`/dashboard/budgets/${currentBudget.id}/edit`)}>
+                Edit Current Budget
+              </Button>
+              <Button variant="outline" onClick={() => router.push('/dashboard/budgets/new')}>
+                <Plus className="mr-2 h-4 w-4" />
+                New Budget
+              </Button>
+            </>
+          ) : (
+            <Button onClick={() => router.push('/dashboard/budgets/new')}>
+              <Plus className="mr-2 h-4 w-4" />
+              Create Budget
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Current Budget Progress */}

@@ -5,13 +5,13 @@
  * Pie/Donut chart showing allocated amounts per category
  */
 
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts'
-import type { BudgetCategoryResponse } from '@/types'
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
+import type { BudgetCategory } from '@/types'
 import { formatCurrency } from '@/lib/currency'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 interface CategoryBreakdownChartProps {
-  categories: BudgetCategoryResponse[]
+  categories: BudgetCategory[]
 }
 
 // Color palette for chart
@@ -29,27 +29,45 @@ const COLORS = [
 ]
 
 export function CategoryBreakdownChart({ categories }: CategoryBreakdownChartProps) {
+  const hasAllocations = categories.some((cat) => cat.allocated_amount > 0)
+  const hasSpending = categories.some((cat) => cat.spent_amount > 0)
+
   // Prepare data for pie chart
-  const chartData = categories
-    .filter((cat) => cat.allocated_amount > 0)
-    .map((cat) => ({
-      name: cat.category_name || 'Unknown',
-      value: Number(cat.allocated_amount),
-      allocated: Number(cat.allocated_amount),
-      spent: Number(cat.spent_amount),
-      percentage: Number(cat.percentage_used) || 0,
-    }))
-    .sort((a, b) => b.value - a.value) // Sort by allocated amount descending
+  const chartData = hasAllocations
+    ? categories
+        .filter((cat) => cat.allocated_amount > 0)
+        .map((cat) => ({
+          name: cat.category_name || 'Unknown',
+          value: Number(cat.allocated_amount),
+          allocated: Number(cat.allocated_amount),
+          spent: Number(cat.spent_amount),
+          percentage: Number(cat.percentage_used) || 0,
+        }))
+        .sort((a, b) => b.value - a.value) // Sort by allocated amount descending
+    : categories
+        .filter((cat) => cat.spent_amount > 0)
+        .map((cat) => ({
+          name: cat.category_name || 'Unknown',
+          value: Number(cat.spent_amount),
+          allocated: Number(cat.allocated_amount),
+          spent: Number(cat.spent_amount),
+          percentage: 0,
+        }))
+        .sort((a, b) => b.value - a.value) // Sort by spent amount descending
 
   if (chartData.length === 0) {
     return (
       <Card>
         <CardHeader>
           <CardTitle>Category Breakdown</CardTitle>
-          <CardDescription>Budget allocation by category</CardDescription>
+          <CardDescription>
+            {hasSpending ? 'Spending by category' : 'Budget allocation by category'}
+          </CardDescription>
         </CardHeader>
         <CardContent className="flex items-center justify-center h-[300px]">
-          <p className="text-sm text-muted-foreground">No budget allocations yet</p>
+          <p className="text-sm text-muted-foreground">
+            {hasSpending ? 'No spending yet' : 'No budget allocations yet'}
+          </p>
         </CardContent>
       </Card>
     )
@@ -66,12 +84,29 @@ export function CategoryBreakdownChart({ categories }: CategoryBreakdownChartPro
         <div className="rounded-lg border bg-background p-3 shadow-md">
           <p className="font-semibold text-sm mb-1">{data.name}</p>
           <div className="space-y-1 text-xs">
-            <p className="text-muted-foreground">
-              Allocated: <span className="font-medium text-foreground">{formatCurrency(data.allocated)}</span>
-            </p>
-            <p className="text-muted-foreground">
-              Spent: <span className="font-medium text-foreground">{formatCurrency(data.spent)}</span>
-            </p>
+            {hasAllocations ? (
+              <>
+                <p className="text-muted-foreground">
+                  Allocated:{' '}
+                  <span className="font-medium text-foreground">
+                    {formatCurrency(data.allocated)}
+                  </span>
+                </p>
+                <p className="text-muted-foreground">
+                  Spent:{' '}
+                  <span className="font-medium text-foreground">
+                    {formatCurrency(data.spent)}
+                  </span>
+                </p>
+              </>
+            ) : (
+              <p className="text-muted-foreground">
+                Spent:{' '}
+                <span className="font-medium text-foreground">
+                  {formatCurrency(data.spent)}
+                </span>
+              </p>
+            )}
             <p className="text-muted-foreground">
               Share: <span className="font-medium text-foreground">{percentage}%</span>
             </p>
@@ -86,7 +121,9 @@ export function CategoryBreakdownChart({ categories }: CategoryBreakdownChartPro
     <Card>
       <CardHeader>
         <CardTitle>Category Breakdown</CardTitle>
-        <CardDescription>Budget allocation by category</CardDescription>
+        <CardDescription>
+          {hasAllocations ? 'Budget allocation by category' : 'Spending by category'}
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={350}>

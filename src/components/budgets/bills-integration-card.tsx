@@ -52,8 +52,9 @@ export function BillsIntegrationCard({ budgetProgress }: BillsIntegrationCardPro
     0
   )
 
-  const totalRemaining = Number(budgetProgress.total_remaining)
-  const projectedRemaining = totalRemaining - totalBillsAmount
+  const hasLimits = Number(budgetProgress.total_allocated) > 0
+  const totalRemaining = hasLimits ? Number(budgetProgress.total_remaining) : null
+  const projectedRemaining = hasLimits ? totalRemaining - totalBillsAmount : null
 
   if (loading) {
     return (
@@ -113,16 +114,22 @@ export function BillsIntegrationCard({ budgetProgress }: BillsIntegrationCardPro
           </div>
           <div className="rounded-lg border p-3">
             <p className="text-sm text-muted-foreground">Current Remaining</p>
-            <p className="text-2xl font-bold">{formatCurrency(totalRemaining)}</p>
+            <p className="text-2xl font-bold">
+              {hasLimits && totalRemaining !== null ? formatCurrency(totalRemaining) : 'No limits'}
+            </p>
           </div>
           <div className="rounded-lg border p-3">
             <p className="text-sm text-muted-foreground">After Bills</p>
             <p
               className={`text-2xl font-bold ${
-                projectedRemaining < 0 ? 'text-destructive' : ''
+                hasLimits && projectedRemaining !== null && projectedRemaining < 0
+                  ? 'text-destructive'
+                  : ''
               }`}
             >
-              {formatCurrency(projectedRemaining)}
+              {hasLimits && projectedRemaining !== null
+                ? formatCurrency(projectedRemaining)
+                : 'No limits'}
             </p>
           </div>
         </div>
@@ -177,7 +184,7 @@ export function BillsIntegrationCard({ budgetProgress }: BillsIntegrationCardPro
         </div>
 
         {/* Warning if projected remaining is negative */}
-        {projectedRemaining < 0 && (
+        {hasLimits && projectedRemaining !== null && projectedRemaining < 0 && (
           <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3">
             <p className="text-sm font-medium text-destructive">
               ⚠️ After bills, you'll be {formatCurrency(Math.abs(projectedRemaining))} over budget

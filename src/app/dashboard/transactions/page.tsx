@@ -11,7 +11,7 @@ import { DateRange } from 'react-day-picker'
 import { bankApi, accountsApi, categoriesApi } from '@/lib/api'
 import type { BankTransaction, Account, Category, BankTransactionCreate, BankTransactionUpdate } from '@/types'
 import { TransactionType, CategoryType } from '@/types'
-import { Plus, Search, Edit, Trash2, X, Filter } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -33,6 +33,14 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { formatCurrency } from '@/lib/currency'
 import { DateRangePicker } from '@/components/ui/date-range-picker'
 import { TransactionSummary } from '@/components/dashboard/transaction-summary'
@@ -341,7 +349,7 @@ export default function TransactionsPage() {
             <SelectTrigger id="category">
               <SelectValue placeholder="Select category" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="max-h-72 overflow-y-auto">
               <SelectItem value="none">No Category</SelectItem>
               {filteredCategories.map((cat) => (
                 <SelectItem key={cat.id} value={cat.id}>
@@ -402,8 +410,8 @@ export default function TransactionsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Transactions</h1>
-          <p className="text-muted-foreground mt-2">
+          <h1 className="text-3xl font-bold text-foreground">Transactions</h1>
+          <p className="mt-1 text-muted-foreground">
             View and manage all your financial transactions
           </p>
         </div>
@@ -416,78 +424,78 @@ export default function TransactionsPage() {
       {/* Transaction Summary */}
       <TransactionSummary data={summary} loading={summaryLoading} />
 
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            <CardTitle className="text-lg">Filters</CardTitle>
+      {/* Search and Filters */}
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Search */}
+          <div className="relative flex-1 min-w-[240px] max-w-md">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search by description..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && loadTransactions()}
+              className="pl-9"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
+
+          {/* Account Filter */}
+          <Select value={selectedAccount} onValueChange={setSelectedAccount}>
+            <SelectTrigger className="min-w-[180px]">
+              <SelectValue placeholder="All Accounts" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Accounts</SelectItem>
+              {accounts.map((account) => (
+                <SelectItem key={account.id} value={account.id}>
+                  {account.account_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Category Filter */}
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger className="min-w-[200px]">
+              <SelectValue placeholder="All Categories" />
+            </SelectTrigger>
+            <SelectContent className="max-h-72 overflow-y-auto">
+              <SelectItem value="all">All Categories</SelectItem>
+              {categories.map((cat) => (
+                <SelectItem key={cat.id} value={cat.id}>
+                  {cat.icon} {cat.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Type Filter */}
+          <Select value={selectedType} onValueChange={setSelectedType}>
+            <SelectTrigger className="min-w-[170px]">
+              <SelectValue placeholder="All Types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="debit">Debit (Expense)</SelectItem>
+              <SelectItem value="credit">Credit (Income)</SelectItem>
+            </SelectContent>
+          </Select>
+
           {/* Date Range Picker */}
-          <div>
-            <Label className="mb-2 block">Date Range</Label>
+          <div className="min-w-[220px]">
+            <Label className="sr-only">Date Range</Label>
             <DateRangePicker value={dateRange} onChange={handleDateRangeChange} />
           </div>
-
-          <div className="grid gap-4 md:grid-cols-4">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && loadTransactions()}
-                className="pl-8"
-              />
-            </div>
-
-            {/* Account Filter */}
-            <Select value={selectedAccount} onValueChange={setSelectedAccount}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Accounts" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Accounts</SelectItem>
-                {accounts.map((account) => (
-                  <SelectItem key={account.id} value={account.id}>
-                    {account.account_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Category Filter */}
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Categories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    {cat.icon} {cat.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Type Filter */}
-            <Select value={selectedType} onValueChange={setSelectedType}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Types" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="debit">Debit (Expense)</SelectItem>
-                <SelectItem value="credit">Credit (Income)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Transactions List */}
       <Card>
@@ -502,69 +510,87 @@ export default function TransactionsPage() {
             <div className="flex justify-center py-8">
               <div className="h-6 w-6 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
             </div>
-          ) : transactions.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">No transactions found</p>
-              <Button className="mt-4" variant="outline" onClick={openCreateDialog}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Your First Transaction
-              </Button>
-            </div>
           ) : (
-            <div className="space-y-2">
-              {transactions.map((transaction) => {
-                const account = accounts.find(a => a.id === transaction.account_id)
-                const category = categories.find(c => c.id === transaction.category_id)
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Account</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {transactions.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                      No transactions found
+                      <div className="mt-4">
+                        <Button variant="outline" onClick={openCreateDialog}>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Your First Transaction
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  transactions.map((transaction) => {
+                    const account = accounts.find(a => a.id === transaction.account_id)
+                    const category = categories.find(c => c.id === transaction.category_id)
 
-                return (
-                  <div
-                    key={transaction.id}
-                    className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-4 flex-1">
-                      <div className="flex-1">
-                        <p className="font-medium">{transaction.description}</p>
-                        <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                          <span>{formatDate(transaction.transaction_date)}</span>
-                          {account && (
-                            <>
-                              <span>•</span>
-                              <span>{account.account_name}</span>
-                            </>
+                    return (
+                      <TableRow key={transaction.id}>
+                        <TableCell className="whitespace-nowrap">
+                          {formatDate(transaction.transaction_date)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-medium">{transaction.description}</div>
+                          {transaction.notes && (
+                            <div className="text-xs text-muted-foreground truncate max-w-[220px]">
+                              {transaction.notes}
+                            </div>
                           )}
-                          {category && (
-                            <>
-                              <span>•</span>
-                              <span>{category.icon} {category.name}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className={`text-lg font-semibold ${
-                          transaction.transaction_type === TransactionType.CREDIT ? 'text-green-500' : 'text-red-500'
-                        }`}>
-                          {transaction.transaction_type === TransactionType.CREDIT ? '+' : '-'}
-                          {formatCurrency(transaction.amount)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 ml-4">
-                      <Button variant="ghost" size="icon" onClick={() => openEditDialog(transaction)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(transaction.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {account?.account_name || '—'}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {category ? `${category.icon} ${category.name}` : '—'}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={transaction.transaction_type === TransactionType.CREDIT ? 'secondary' : 'outline'}>
+                            {transaction.transaction_type === TransactionType.CREDIT ? 'Credit' : 'Debit'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-semibold">
+                          <span className={transaction.transaction_type === TransactionType.CREDIT ? 'text-green-500' : 'text-red-500'}>
+                            {transaction.transaction_type === TransactionType.CREDIT ? '+' : '-'}
+                            {formatCurrency(transaction.amount)}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button variant="ghost" size="icon" onClick={() => openEditDialog(transaction)}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDelete(transaction.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
+                )}
+              </TableBody>
+            </Table>
           )}
 
           {/* Pagination */}

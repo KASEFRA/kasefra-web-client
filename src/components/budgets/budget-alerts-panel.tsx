@@ -5,17 +5,37 @@
  * Displays budget alerts and warnings
  */
 
-import type { BudgetProgress } from '@/types'
+import { useEffect, useMemo, useState } from 'react'
+import type { BudgetProgress, Category } from '@/types'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { AlertTriangle, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { formatCurrency } from '@/lib/currency'
+import { categoriesApi } from '@/lib/api'
 
 interface BudgetAlertsPanelProps {
   budgetProgress: BudgetProgress
 }
 
 export function BudgetAlertsPanel({ budgetProgress }: BudgetAlertsPanelProps) {
+  const [categories, setCategories] = useState<Map<string, Category>>(new Map())
+
+  useEffect(() => {
+    let isMounted = true
+    categoriesApi
+      .getAll()
+      .then((response) => {
+        if (!isMounted) return
+        const map = new Map<string, Category>()
+        response.categories.forEach((category) => map.set(category.id, category))
+        setCategories(map)
+      })
+      .catch(() => null)
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
   const overBudgetCategories = budgetProgress.categories.filter(
     (cat) => cat.is_over_budget
   )
@@ -30,6 +50,32 @@ export function BudgetAlertsPanel({ budgetProgress }: BudgetAlertsPanelProps) {
   const hasAlerts = overBudgetCategories.length > 0 || nearLimitCategories.length > 0
   const totalRemaining = Number(budgetProgress.total_remaining)
   const isOverallOverBudget = budgetProgress.is_over_budget
+  const hasLimits = Number(budgetProgress.total_allocated) > 0
+
+  const getCategoryName = useMemo(() => {
+    return (categoryId: string, fallback?: string | null) =>
+      fallback || categories.get(categoryId)?.name || 'Uncategorized'
+  }, [categories])
+
+  if (!hasLimits) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Budget Alerts</CardTitle>
+          <CardDescription>Set limits to activate alerts</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>No limits set yet</AlertTitle>
+            <AlertDescription>
+              Add budget limits to receive alerts when you approach or exceed your targets.
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+    )
+  }
 
   if (!hasAlerts && !isOverallOverBudget) {
     return (
@@ -83,7 +129,7 @@ export function BudgetAlertsPanel({ budgetProgress }: BudgetAlertsPanelProps) {
           return (
             <Alert key={category.id} variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertTitle>{category.category_name}</AlertTitle>
+              <AlertTitle>{getCategoryName(category.category_id, category.category_name)}</AlertTitle>
               <AlertDescription>
                 <div className="space-y-1">
                   <p>
@@ -114,7 +160,7 @@ export function BudgetAlertsPanel({ budgetProgress }: BudgetAlertsPanelProps) {
             >
               <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
               <AlertTitle className="text-yellow-900 dark:text-yellow-100">
-                {category.category_name}
+                {getCategoryName(category.category_id, category.category_name)}
               </AlertTitle>
               <AlertDescription className="text-yellow-700 dark:text-yellow-300">
                 <div className="space-y-1">

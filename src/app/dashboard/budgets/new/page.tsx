@@ -39,12 +39,10 @@ export default function CreateBudgetPage() {
 
       const createdBudget = await budgetsApi.create(payload)
 
-      // Add category allocations (only those with allocated_amount > 0)
-      const allocationsToAdd = allocations.filter((a) => a.allocated_amount > 0)
-
-      if (allocationsToAdd.length > 0) {
+      // Add category allocations (include zero allocations for main categories)
+      if (allocations.length > 0) {
         await Promise.all(
-          allocationsToAdd.map((allocation) =>
+          allocations.map((allocation) =>
             budgetsApi.addCategory(createdBudget.id, {
               category_id: allocation.category_id,
               allocated_amount: allocation.allocated_amount,
@@ -80,7 +78,9 @@ export default function CreateBudgetPage() {
         </Button>
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Create New Budget</h1>
-          <p className="text-muted-foreground">Set up a new budget to track your spending</p>
+          <p className="text-muted-foreground">
+            Create an additional budget and set limits for your main categories
+          </p>
         </div>
       </div>
 

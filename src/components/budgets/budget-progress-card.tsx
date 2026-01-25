@@ -6,9 +6,9 @@
  */
 
 import { useEffect, useState } from 'react'
-import { budgetsApi } from '@/lib/api'
+import { budgetsApi, categoriesApi } from '@/lib/api'
 import { formatCurrency } from '@/lib/currency'
-import type { BudgetProgress } from '@/types'
+import type { BudgetProgress, Category, BudgetCategory } from '@/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
@@ -24,6 +24,7 @@ export function BudgetProgressCard({ budgetId, showCategories = true }: BudgetPr
   const [progress, setProgress] = useState<BudgetProgress | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [categories, setCategories] = useState<Map<string, Category>>(new Map())
 
   useEffect(() => {
     loadProgress()
@@ -33,8 +34,16 @@ export function BudgetProgressCard({ budgetId, showCategories = true }: BudgetPr
     try {
       setLoading(true)
       setError(null)
-      const data = await budgetsApi.getProgress(budgetId)
-      setProgress(data)
+      const [progressData, categoriesRes] = await Promise.all([
+        budgetsApi.getProgress(budgetId),
+        categoriesApi.getAll().catch(() => null),
+      ])
+      setProgress(progressData)
+      if (categoriesRes) {
+        const categoriesMap = new Map<string, Category>()
+        categoriesRes.categories.forEach((category) => categoriesMap.set(category.id, category))
+        setCategories(categoriesMap)
+      }
     } catch (err: any) {
       console.error('Failed to load budget progress:', err)
       setError(err.response?.data?.detail || 'Failed to load progress')
@@ -80,6 +89,9 @@ export function BudgetProgressCard({ budgetId, showCategories = true }: BudgetPr
     })
   }
 
+  const hasLimits = progress.total_allocated > 0
+  const totalSpent = progress.total_spent
+
   return (
     <Card>
       <CardHeader>
@@ -100,19 +112,45 @@ export function BudgetProgressCard({ budgetId, showCategories = true }: BudgetPr
         <div className="space-y-3">
           <div className="flex justify-between text-sm">
             <span className="font-medium">Overall Budget</span>
-            <span className={progress.is_over_budget ? 'text-red-600 font-semibold' : ''}>
-              {formatCurrency(progress.total_spent)} / {formatCurrency(progress.total_allocated)}
-            </span>
+            {hasLimits ? (
+              <span className={progress.is_over_budget ? 'text-red-600 font-semibold' : ''}>
+                {formatCurrency(progress.total_spent)} / {formatCurrency(progress.total_allocated)}
+              </span>
+            ) : (
+              <span className="text-muted-foreground">No limits set</span>
+            )}
           </div>
           <Progress
-            value={Math.min(Number(progress.percentage_used || 0), 100)}
-            className={progress.is_over_budget ? 'bg-red-100 [&>div]:bg-red-600' : ''}
+            value={hasLimits ? Math.min(Number(progress.percentage_used || 0), 100) : 100}
+            className={
+              hasLimits
+                ? progress.is_over_budget
+                  ? 'bg-red-100 [&>div]:bg-red-600'
+                  : ''
+                : 'bg-muted [&>div]:bg-muted-foreground/30'
+            }
           />
           <div className="flex justify-between items-center text-xs text-muted-foreground">
-            <span>{Number(progress.percentage_used || 0).toFixed(1)}% used</span>
-            <span className={progress.total_remaining < 0 ? 'text-red-600 font-semibold' : 'text-green-600'}>
-              {formatCurrency(Math.abs(progress.total_remaining))} {progress.total_remaining < 0 ? 'over' : 'remaining'}
-            </span>
+            {hasLimits ? (
+              <>
+                <span>{Number(progress.percentage_used || 0).toFixed(1)}% used</span>
+                <span
+                  className={
+                    progress.total_remaining < 0
+                      ? 'text-red-600 font-semibold'
+                      : 'text-green-600'
+                  }
+                >
+                  {formatCurrency(Math.abs(progress.total_remaining))}{' '}
+                  {progress.total_remaining < 0 ? 'over' : 'remaining'}
+                </span>
+              </>
+            ) : (
+              <>
+                <span>{formatCurrency(progress.total_spent)} spent</span>
+                <span className="text-muted-foreground">No limits yet</span>
+              </>
+            )}
           </div>
         </div>
 
@@ -120,7 +158,9 @@ export function BudgetProgressCard({ budgetId, showCategories = true }: BudgetPr
         <div className="grid grid-cols-3 gap-4 pt-4 border-t">
           <div className="text-center">
             <div className="text-xs text-muted-foreground mb-1">Allocated</div>
-            <div className="text-sm font-semibold">{formatCurrency(progress.total_allocated)}</div>
+            <div className="text-sm font-semibold">
+              {hasLimits ? formatCurrency(progress.total_allocated) : '—'}
+            </div>
           </div>
           <div className="text-center">
             <div className="text-xs text-muted-foreground mb-1">Spent</div>
@@ -128,8 +168,12 @@ export function BudgetProgressCard({ budgetId, showCategories = true }: BudgetPr
           </div>
           <div className="text-center">
             <div className="text-xs text-muted-foreground mb-1">Remaining</div>
-            <div className={`text-sm font-semibold ${progress.total_remaining < 0 ? 'text-red-600' : 'text-green-600'}`}>
-              {formatCurrency(Math.abs(progress.total_remaining))}
+            <div
+              className={`text-sm font-semibold ${
+                hasLimits && progress.total_remaining < 0 ? 'text-red-600' : 'text-green-600'
+              }`}
+            >
+              {hasLimits ? formatCurrency(Math.abs(progress.total_remaining)) : 'No limit'}
             </div>
           </div>
         </div>
@@ -157,7 +201,16 @@ export function BudgetProgressCard({ budgetId, showCategories = true }: BudgetPr
           <div className="space-y-4 pt-4 border-t">
             <h4 className="text-sm font-semibold">Category Breakdown</h4>
             {progress.categories.map((category) => (
-              <CategoryProgressItem key={category.id} category={category} />
+              <CategoryProgressItem
+                key={category.id}
+                category={category}
+                displayName={
+                category.category_name ||
+                  categories.get(category.category_id)?.name ||
+                  'Uncategorized'
+                }
+                totalSpent={totalSpent}
+              />
             ))}
           </div>
         )}
@@ -167,50 +220,75 @@ export function BudgetProgressCard({ budgetId, showCategories = true }: BudgetPr
 }
 
 interface CategoryProgressItemProps {
-  category: {
-    category_name: string | null
-    allocated_amount: number
-    spent_amount: number
-    remaining_amount: number | null
-    percentage_used: number | null
-    is_over_budget: boolean | null
-    alert_threshold: number
-  }
+  category: BudgetCategory
+  displayName: string
+  totalSpent: number
 }
 
-function CategoryProgressItem({ category }: CategoryProgressItemProps) {
-  const percentUsed = Number(category.percentage_used || 0)
-  const isOverBudget = category.is_over_budget || false
-  const isNearLimit = !isOverBudget && percentUsed >= Number(category.alert_threshold || 0)
+function CategoryProgressItem({
+  category,
+  displayName,
+  totalSpent,
+}: CategoryProgressItemProps) {
+  const hasAllocation = category.allocated_amount > 0
+  const thresholdPct = Number(category.alert_threshold || 0) * 100
+  const percentUsed = hasAllocation
+    ? Number(category.percentage_used || 0)
+    : totalSpent > 0
+    ? (category.spent_amount / totalSpent) * 100
+    : 0
+  const isOverBudget = hasAllocation && (category.is_over_budget || false)
+  const isNearLimit = hasAllocation && !isOverBudget && percentUsed >= thresholdPct
 
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between text-sm">
         <div className="flex items-center gap-2">
-          <span className="font-medium">{category.category_name || 'Uncategorized'}</span>
+          <span className="font-medium">{displayName}</span>
           {isOverBudget && <AlertCircle className="h-4 w-4 text-red-600" />}
           {isNearLimit && <TrendingUp className="h-4 w-4 text-yellow-600" />}
-          {!isOverBudget && !isNearLimit && percentUsed > 0 && <CheckCircle className="h-4 w-4 text-green-600" />}
+          {!isOverBudget && !isNearLimit && percentUsed > 0 && hasAllocation && (
+            <CheckCircle className="h-4 w-4 text-green-600" />
+          )}
         </div>
-        <span className={isOverBudget ? 'text-red-600 font-semibold' : ''}>
-          {formatCurrency(category.spent_amount)} / {formatCurrency(category.allocated_amount)}
-        </span>
+        {hasAllocation ? (
+          <span className={isOverBudget ? 'text-red-600 font-semibold' : ''}>
+            {formatCurrency(category.spent_amount)} / {formatCurrency(category.allocated_amount)}
+          </span>
+        ) : (
+          <span className="text-muted-foreground">{formatCurrency(category.spent_amount)} spent</span>
+        )}
       </div>
       <Progress 
         value={Math.min(percentUsed, 100)} 
         className={
-          isOverBudget 
-            ? 'bg-red-100 [&>div]:bg-red-600' 
-            : isNearLimit 
-            ? 'bg-yellow-100 [&>div]:bg-yellow-600' 
+          isOverBudget
+            ? 'bg-red-100 [&>div]:bg-red-600'
+            : isNearLimit
+            ? 'bg-yellow-100 [&>div]:bg-yellow-600'
+            : !hasAllocation
+            ? 'bg-muted [&>div]:bg-muted-foreground/30'
             : ''
         }
       />
       <div className="flex justify-between text-xs text-muted-foreground">
-        <span>{percentUsed.toFixed(1)}% used</span>
-        <span className={category.remaining_amount && category.remaining_amount < 0 ? 'text-red-600' : 'text-green-600'}>
-          {formatCurrency(Math.abs(category.remaining_amount || 0))} {category.remaining_amount && category.remaining_amount < 0 ? 'over' : 'left'}
+        <span>
+          {percentUsed.toFixed(1)}% {hasAllocation ? 'used' : 'of spend'}
         </span>
+        {hasAllocation ? (
+          <span
+            className={
+              category.remaining_amount && category.remaining_amount < 0
+                ? 'text-red-600'
+                : 'text-green-600'
+            }
+          >
+            {formatCurrency(Math.abs(category.remaining_amount || 0))}{' '}
+            {category.remaining_amount && category.remaining_amount < 0 ? 'over' : 'left'}
+          </span>
+        ) : (
+          <span className="text-muted-foreground">No limit</span>
+        )}
       </div>
     </div>
   )

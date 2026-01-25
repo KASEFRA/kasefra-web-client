@@ -5,13 +5,15 @@
  * Displays charts and analytics for budget performance
  */
 
+import { useEffect, useMemo, useState } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { CategoryBreakdownChart } from './charts/category-breakdown-chart'
 import { SpendingProgressChart } from './charts/spending-progress-chart'
-import type { BudgetProgress } from '@/types'
+import type { BudgetProgress, Category } from '@/types'
 import { formatCurrency } from '@/lib/currency'
 import { Card, CardContent } from '@/components/ui/card'
 import { TrendingDown, TrendingUp, Wallet, Calendar } from 'lucide-react'
+import { categoriesApi } from '@/lib/api'
 
 interface BudgetAnalyticsProps {
   budgetProgress: BudgetProgress
@@ -22,6 +24,34 @@ export function BudgetAnalytics({ budgetProgress }: BudgetAnalyticsProps) {
   const totalSpent = Number(budgetProgress.total_spent)
   const totalRemaining = Number(budgetProgress.total_remaining)
   const percentageUsed = Number(budgetProgress.percentage_used)
+  const hasLimits = totalAllocated > 0
+  const [categories, setCategories] = useState<Map<string, Category>>(new Map())
+
+  useEffect(() => {
+    let isMounted = true
+    categoriesApi
+      .getAll()
+      .then((response) => {
+        if (!isMounted) return
+        const map = new Map<string, Category>()
+        response.categories.forEach((category) => map.set(category.id, category))
+        setCategories(map)
+      })
+      .catch(() => null)
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  const categoriesWithNames = useMemo(() => {
+    return budgetProgress.categories.map((category) => ({
+      ...category,
+      category_name:
+        category.category_name ||
+        categories.get(category.category_id)?.name ||
+        'Uncategorized',
+    }))
+  }, [budgetProgress.categories, categories])
 
   // Calculate days in period (simplified)
   const getDaysInPeriod = () => {
@@ -51,7 +81,9 @@ export function BudgetAnalytics({ budgetProgress }: BudgetAnalyticsProps) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Budget</p>
-                <p className="text-2xl font-bold">{formatCurrency(totalAllocated)}</p>
+                <p className="text-2xl font-bold">
+                  {hasLimits ? formatCurrency(totalAllocated) : 'No limits'}
+                </p>
               </div>
               <Wallet className="h-8 w-8 text-muted-foreground" />
             </div>
@@ -65,7 +97,7 @@ export function BudgetAnalytics({ budgetProgress }: BudgetAnalyticsProps) {
                 <p className="text-sm font-medium text-muted-foreground">Total Spent</p>
                 <p className="text-2xl font-bold">{formatCurrency(totalSpent)}</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {percentageUsed.toFixed(1)}% used
+                  {hasLimits ? `${percentageUsed.toFixed(1)}% used` : 'No limits set'}
                 </p>
               </div>
               <TrendingUp className="h-8 w-8 text-muted-foreground" />
@@ -78,8 +110,8 @@ export function BudgetAnalytics({ budgetProgress }: BudgetAnalyticsProps) {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Remaining</p>
-                <p className={`text-2xl font-bold ${totalRemaining < 0 ? 'text-destructive' : ''}`}>
-                  {formatCurrency(totalRemaining)}
+                <p className={`text-2xl font-bold ${hasLimits && totalRemaining < 0 ? 'text-destructive' : ''}`}>
+                  {hasLimits ? formatCurrency(totalRemaining) : '—'}
                 </p>
               </div>
               <TrendingDown className="h-8 w-8 text-muted-foreground" />
@@ -113,11 +145,11 @@ export function BudgetAnalytics({ budgetProgress }: BudgetAnalyticsProps) {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-          <CategoryBreakdownChart categories={budgetProgress.categories} />
+          <CategoryBreakdownChart categories={categoriesWithNames} />
         </TabsContent>
 
         <TabsContent value="progress" className="space-y-4">
-          <SpendingProgressChart categories={budgetProgress.categories} />
+          <SpendingProgressChart categories={categoriesWithNames} />
         </TabsContent>
       </Tabs>
     </div>
