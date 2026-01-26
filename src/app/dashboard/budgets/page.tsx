@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { budgetsApi } from '@/lib/api'
 import type { Budget } from '@/types'
-import { Plus, Loader2 } from 'lucide-react'
+import { Plus, Loader2, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { BudgetProgressCard } from '@/components/budgets/budget-progress-card'
@@ -33,6 +33,8 @@ export default function BudgetsPage() {
   const [loading, setLoading] = useState(true)
   const [budgetToDelete, setBudgetToDelete] = useState<Budget | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
+  const [syncKey, setSyncKey] = useState(0)
 
   useEffect(() => {
     loadData()
@@ -84,6 +86,22 @@ export default function BudgetsPage() {
     }
   }
 
+  const handleSync = async () => {
+    if (!currentBudget) return
+
+    try {
+      setIsSyncing(true)
+      await budgetsApi.syncCurrent()
+      toast.success('Budget synced successfully')
+      setSyncKey((value) => value + 1)
+    } catch (error: any) {
+      console.error('Failed to sync budget:', error)
+      toast.error(error.response?.data?.detail || 'Failed to sync budget')
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
@@ -111,6 +129,19 @@ export default function BudgetsPage() {
               <Button onClick={() => router.push(`/dashboard/budgets/${currentBudget.id}/edit`)}>
                 Edit Current Budget
               </Button>
+              <Button variant="outline" onClick={handleSync} disabled={isSyncing}>
+                {isSyncing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Syncing...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Sync
+                  </>
+                )}
+              </Button>
               <Button variant="outline" onClick={() => router.push('/dashboard/budgets/new')}>
                 <Plus className="mr-2 h-4 w-4" />
                 New Budget
@@ -129,7 +160,11 @@ export default function BudgetsPage() {
       {currentBudget && (
         <div className="space-y-4">
           <h2 className="text-xl font-semibold">Current Budget</h2>
-          <BudgetProgressCard budgetId={currentBudget.id} showCategories={true} />
+          <BudgetProgressCard
+            budgetId={currentBudget.id}
+            showCategories={true}
+            refreshKey={syncKey}
+          />
         </div>
       )}
 

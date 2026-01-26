@@ -79,6 +79,14 @@ export const budgetsApi = {
     return response.data
   },
 
+  /**
+   * Sync current budget spending from transactions
+   */
+  async syncCurrent(): Promise<BudgetProgress> {
+    const response = await apiClient.post<BudgetProgress>('/budgets/current/sync')
+    return response.data
+  },
+
   // ===== BUDGET CATEGORIES =====
 
   /**

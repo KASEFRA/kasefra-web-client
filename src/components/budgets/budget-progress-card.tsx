@@ -18,9 +18,14 @@ import { Skeleton } from '@/components/ui/skeleton'
 interface BudgetProgressCardProps {
   budgetId: string
   showCategories?: boolean
+  refreshKey?: number
 }
 
-export function BudgetProgressCard({ budgetId, showCategories = true }: BudgetProgressCardProps) {
+export function BudgetProgressCard({
+  budgetId,
+  showCategories = true,
+  refreshKey,
+}: BudgetProgressCardProps) {
   const [progress, setProgress] = useState<BudgetProgress | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -28,7 +33,7 @@ export function BudgetProgressCard({ budgetId, showCategories = true }: BudgetPr
 
   useEffect(() => {
     loadProgress()
-  }, [budgetId])
+  }, [budgetId, refreshKey])
 
   const loadProgress = async () => {
     try {
