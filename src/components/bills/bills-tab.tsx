@@ -1,17 +1,15 @@
 'use client'
 
 /**
- * Recurring Bills Page
- * Manage recurring bills and track payments
+ * Bills Tab
+ * Displays recurring bills inside the budgets page tabs.
  */
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { budgetsApi } from '@/lib/api'
 import type { RecurringBill } from '@/types'
-import { Plus, Loader2, Calendar, DollarSign, AlertCircle } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { budgetsApi } from '@/lib/api'
+import { formatCurrency } from '@/lib/currency'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { BillsList } from '@/components/bills/bills-list'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
@@ -24,11 +22,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { AlertCircle, Calendar, DollarSign, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { formatCurrency } from '@/lib/currency'
 
-export default function BillsPage() {
-  const router = useRouter()
+export function BillsTab() {
   const [allBills, setAllBills] = useState<RecurringBill[]>([])
   const [upcomingBills, setUpcomingBills] = useState<RecurringBill[]>([])
   const [overdueBills, setOverdueBills] = useState<RecurringBill[]>([])
@@ -44,8 +41,7 @@ export default function BillsPage() {
   const loadData = async () => {
     try {
       setLoading(true)
-      
-      // Load all bills and upcoming bills
+
       const [allBillsRes, upcomingRes] = await Promise.all([
         budgetsApi.getAllBills(),
         budgetsApi.getUpcomingBills(30),
@@ -54,9 +50,8 @@ export default function BillsPage() {
       setAllBills(allBillsRes.bills)
       setUpcomingBills(upcomingRes.bills)
       setUpcomingTotal(upcomingRes.total_amount)
-      
-      // Filter overdue bills from all bills
-      const overdue = allBillsRes.bills.filter(bill => bill.is_overdue === true)
+
+      const overdue = allBillsRes.bills.filter((bill) => bill.is_overdue === true)
       setOverdueBills(overdue)
     } catch (error: any) {
       console.error('Failed to load bills:', error)
@@ -76,10 +71,6 @@ export default function BillsPage() {
       console.error('Failed to mark bill as paid:', error)
       toast.error(error.response?.data?.detail || 'Failed to mark bill as paid')
     }
-  }
-
-  const handleEdit = (bill: RecurringBill) => {
-    router.push(`/dashboard/bills/${bill.id}/edit`)
   }
 
   const handleDelete = (bill: RecurringBill) => {
@@ -116,20 +107,6 @@ export default function BillsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Recurring Bills</h1>
-          <p className="text-muted-foreground">
-            Manage your recurring payments and track due dates
-          </p>
-        </div>
-        <Button onClick={() => router.push('/dashboard/bills/new')}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Bill
-        </Button>
-      </div>
-
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
@@ -141,7 +118,7 @@ export default function BillsPage() {
           <CardContent>
             <div className="text-2xl font-bold">{allBills.length}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              {allBills.filter(b => b.is_active).length} active
+              {allBills.filter((bill) => bill.is_active).length} active
             </p>
           </CardContent>
         </Card>
@@ -180,24 +157,13 @@ export default function BillsPage() {
       {/* Bills Tabs */}
       <Tabs defaultValue="all" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="all">
-            All Bills ({allBills.length})
-          </TabsTrigger>
-          <TabsTrigger value="upcoming">
-            Upcoming ({upcomingBills.length})
-          </TabsTrigger>
-          <TabsTrigger value="overdue">
-            Overdue ({overdueBills.length})
-          </TabsTrigger>
+          <TabsTrigger value="all">All Bills ({allBills.length})</TabsTrigger>
+          <TabsTrigger value="upcoming">Upcoming ({upcomingBills.length})</TabsTrigger>
+          <TabsTrigger value="overdue">Overdue ({overdueBills.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="all" className="space-y-4">
-          <BillsList
-            bills={allBills}
-            onMarkPaid={handleMarkPaid}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-          />
+          <BillsList bills={allBills} onMarkPaid={handleMarkPaid} onDelete={handleDelete} />
         </TabsContent>
 
         <TabsContent value="upcoming" className="space-y-4">
@@ -214,12 +180,7 @@ export default function BillsPage() {
                   </div>
                 </CardContent>
               </Card>
-              <BillsList
-                bills={upcomingBills}
-                onMarkPaid={handleMarkPaid}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-              />
+              <BillsList bills={upcomingBills} onMarkPaid={handleMarkPaid} onDelete={handleDelete} />
             </>
           ) : (
             <Card>
@@ -248,12 +209,7 @@ export default function BillsPage() {
                   </div>
                 </CardContent>
               </Card>
-              <BillsList
-                bills={overdueBills}
-                onMarkPaid={handleMarkPaid}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-              />
+              <BillsList bills={overdueBills} onMarkPaid={handleMarkPaid} onDelete={handleDelete} />
             </>
           ) : (
             <Card>
@@ -275,7 +231,7 @@ export default function BillsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Bill</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <strong>{billToDelete?.bill_name}</strong>? 
+              Are you sure you want to delete <strong>{billToDelete?.bill_name}</strong>?
               This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>

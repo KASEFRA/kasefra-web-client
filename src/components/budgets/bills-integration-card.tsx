@@ -81,7 +81,7 @@ export function BillsIntegrationCard({ budgetProgress }: BillsIntegrationCardPro
         <CardContent>
           <div className="text-center py-6 text-muted-foreground">
             <p className="text-sm">No upcoming bills match your budget categories</p>
-            <Link href="/dashboard/bills">
+            <Link href="/dashboard/budgets?tab=bills">
               <Button variant="link" className="mt-2">
                 Manage Recurring Bills <ExternalLink className="h-3 w-3 ml-1" />
               </Button>
@@ -196,7 +196,7 @@ export function BillsIntegrationCard({ budgetProgress }: BillsIntegrationCardPro
         )}
 
         {/* View All Link */}
-        <Link href="/dashboard/bills">
+        <Link href="/dashboard/budgets?tab=bills">
           <Button variant="outline" className="w-full">
             Manage All Bills <ExternalLink className="h-4 w-4 ml-2" />
           </Button>

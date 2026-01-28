@@ -109,7 +109,7 @@ export function UpcomingBillsWidget() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => router.push('/dashboard/bills')}
+              onClick={() => router.push('/dashboard/budgets?tab=bills')}
             >
               Manage Bills
             </Button>
@@ -132,7 +132,7 @@ export function UpcomingBillsWidget() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => router.push('/dashboard/bills')}
+            onClick={() => router.push('/dashboard/budgets?tab=bills')}
           >
             View All
             <ArrowRight className="ml-2 h-4 w-4" />
@@ -164,7 +164,7 @@ export function UpcomingBillsWidget() {
                 className={`flex items-center justify-between space-x-4 rounded-lg border p-3 transition-colors hover:bg-muted/50 cursor-pointer ${
                   isDueToday ? 'border-red-300 bg-red-50 dark:bg-red-950/20' : ''
                 }`}
-                onClick={() => router.push('/dashboard/bills')}
+                onClick={() => router.push('/dashboard/budgets?tab=bills')}
               >
                 {/* Icon and Info */}
                 <div className="flex items-center space-x-3 flex-1 min-w-0">
@@ -224,7 +224,7 @@ export function UpcomingBillsWidget() {
         <Button
           variant="outline"
           className="w-full"
-          onClick={() => router.push('/dashboard/bills/upcoming')}
+          onClick={() => router.push('/dashboard/budgets?tab=bills')}
         >
           View All Upcoming Bills
         </Button>

@@ -172,11 +172,12 @@ export function BudgetProgressCard({
             <div className="text-sm font-semibold">{formatCurrency(progress.total_spent)}</div>
           </div>
           <div className="text-center">
-            <div className="text-xs text-muted-foreground mb-1">Remaining</div>
+            <div className="text-xs text-muted-foreground mb-1">{
+              hasLimits && progress.total_remaining < 0 ? 'Over' : 'Remaining'
+            }</div>
             <div
-              className={`text-sm font-semibold ${
-                hasLimits && progress.total_remaining < 0 ? 'text-red-600' : 'text-green-600'
-              }`}
+              className={`text-sm font-semibold ${hasLimits && progress.total_remaining < 0 ? 'text-red-600' : 'text-green-600'
+                }`}
             >
               {hasLimits ? formatCurrency(Math.abs(progress.total_remaining)) : 'No limit'}
             </div>
@@ -210,7 +211,7 @@ export function BudgetProgressCard({
                 key={category.id}
                 category={category}
                 displayName={
-                category.category_name ||
+                  category.category_name ||
                   categories.get(category.category_id)?.name ||
                   'Uncategorized'
                 }
@@ -240,8 +241,8 @@ function CategoryProgressItem({
   const percentUsed = hasAllocation
     ? Number(category.percentage_used || 0)
     : totalSpent > 0
-    ? (category.spent_amount / totalSpent) * 100
-    : 0
+      ? (category.spent_amount / totalSpent) * 100
+      : 0
   const isOverBudget = hasAllocation && (category.is_over_budget || false)
   const isNearLimit = hasAllocation && !isOverBudget && percentUsed >= thresholdPct
 
@@ -264,16 +265,16 @@ function CategoryProgressItem({
           <span className="text-muted-foreground">{formatCurrency(category.spent_amount)} spent</span>
         )}
       </div>
-      <Progress 
-        value={Math.min(percentUsed, 100)} 
+      <Progress
+        value={Math.min(percentUsed, 100)}
         className={
           isOverBudget
             ? 'bg-red-100 [&>div]:bg-red-600'
             : isNearLimit
-            ? 'bg-yellow-100 [&>div]:bg-yellow-600'
-            : !hasAllocation
-            ? 'bg-muted [&>div]:bg-muted-foreground/30'
-            : ''
+              ? 'bg-yellow-100 [&>div]:bg-yellow-600'
+              : !hasAllocation
+                ? 'bg-muted [&>div]:bg-muted-foreground/30'
+                : ''
         }
       />
       <div className="flex justify-between text-xs text-muted-foreground">
