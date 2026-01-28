@@ -5,8 +5,6 @@
  * Display recurring bills with status and actions
  */
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { formatCurrency } from '@/lib/currency'
 import type { RecurringBill } from '@/types'
 import { Card, CardContent } from '@/components/ui/card'
@@ -30,8 +28,6 @@ interface BillsListProps {
 }
 
 export function BillsList({ bills, onMarkPaid, onEdit, onDelete }: BillsListProps) {
-  const router = useRouter()
-
   const getFrequencyName = (frequency: string) => {
     const frequencyMap: Record<string, string> = {
       weekly: 'Weekly',
