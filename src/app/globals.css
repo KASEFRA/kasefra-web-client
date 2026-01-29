@@ -8,40 +8,41 @@
 @layer base {
   :root {
     /* Kasefra Royal Purple Theme - Light Mode */
-    --background: 0 0% 100%;
+    --background: 270 60% 99%;
     --foreground: 270 45% 15%;
-    
-    --primary: 270 45% 43%; /* Kasefra Royal Purple #6e4993 */
+
+    --primary: 270 45% 43%;
+    /* Kasefra Royal Purple #6e4993 */
     --primary-foreground: 0 0% 100%;
-    
+
     --secondary: 270 35% 92%;
     --secondary-foreground: 270 45% 25%;
-    
+
     --accent: 270 40% 96%;
     --accent-foreground: 270 45% 30%;
-    
+
     --muted: 240 5% 96%;
     --muted-foreground: 240 4% 46%;
-    
-    --card: 0 0% 100%;
+
+    --card: 270 45% 98%;
     --card-foreground: 270 45% 15%;
-    
-    --popover: 0 0% 100%;
+
+    --popover: 270 45% 97%;
     --popover-foreground: 270 45% 15%;
-    
+
     --border: 240 6% 90%;
     --input: 240 6% 90%;
     --ring: 270 45% 43%;
-    
+
     --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
-    
+
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    
+
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
-    
+
     --radius: 0.5rem;
 
     /* Chart colors */
@@ -52,54 +53,54 @@
     --chart-5: 210 40% 60%;
 
     /* Sidebar - Colors */
-    --sidebar-background: 0 0% 98%;
+    --sidebar-background: 267 60% 98%;
     --sidebar-foreground: 270 45% 25%;
     --sidebar-primary: 270 45% 43%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 270 40% 96%;
+    --sidebar-accent: 270 50% 96%;
     --sidebar-accent-foreground: 270 45% 25%;
     --sidebar-border: 240 6% 90%;
     --sidebar-ring: 270 45% 43%;
 
     /* Sidebar - Dimensions */
-    --sidebar-width: 16rem;
+    --sidebar-width: 13rem;
     --sidebar-width-icon: 3rem;
-    --sidebar-width-mobile: 18rem;
+    --sidebar-width-mobile: 14rem;
   }
 
   .dark {
     /* Kasefra Royal Purple Theme - Dark Mode */
     --background: 270 30% 8%;
     --foreground: 0 0% 98%;
-    
+
     --primary: 270 50% 55%;
     --primary-foreground: 270 30% 10%;
-    
+
     --secondary: 270 30% 20%;
     --secondary-foreground: 270 20% 90%;
-    
+
     --accent: 270 25% 15%;
     --accent-foreground: 270 20% 90%;
-    
+
     --muted: 240 10% 15%;
     --muted-foreground: 240 5% 65%;
-    
+
     --card: 270 25% 10%;
     --card-foreground: 0 0% 98%;
-    
+
     --popover: 270 30% 8%;
     --popover-foreground: 0 0% 98%;
-    
+
     --border: 270 20% 20%;
     --input: 270 20% 20%;
     --ring: 270 50% 55%;
-    
+
     --success: 142 76% 40%;
     --success-foreground: 142 90% 98%;
-    
+
     --destructive: 0 72% 55%;
     --destructive-foreground: 0 0% 98%;
-    
+
     --warning: 38 92% 55%;
     --warning-foreground: 38 95% 98%;
 
@@ -130,7 +131,8 @@
     font-family: 'Geist Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   }
 
-  code, pre {
+  code,
+  pre {
     font-family: 'Geist Mono', 'SF Mono', Monaco, 'Cascadia Code', Consolas, monospace;
   }
 }

@@ -150,6 +150,10 @@ export default function TransactionsPage() {
       setSummaryLoading(true)
       const filters: any = {}
       
+      if (selectedAccount !== 'all') filters.account_id = selectedAccount
+      if (selectedCategory !== 'all') filters.category_id = selectedCategory
+      if (selectedType !== 'all') filters.transaction_type = selectedType
+      if (searchQuery) filters.search_term = searchQuery
       if (dateRange?.from) filters.start_date = format(dateRange.from, 'yyyy-MM-dd')
       if (dateRange?.to) filters.end_date = format(dateRange.to, 'yyyy-MM-dd')
 
@@ -185,6 +189,7 @@ export default function TransactionsPage() {
       setCreateDialogOpen(false)
       resetForm()
       await loadTransactions()
+      await loadSummary()
     } catch (error: any) {
       console.error('Failed to create transaction:', error)
       alert(error.response?.data?.error?.details || 'Failed to create transaction')
@@ -213,6 +218,7 @@ export default function TransactionsPage() {
       setEditingTransaction(null)
       resetForm()
       await loadTransactions()
+      await loadSummary()
     } catch (error: any) {
       console.error('Failed to update transaction:', error)
       alert(error.response?.data?.error?.details || 'Failed to update transaction')
@@ -227,6 +233,7 @@ export default function TransactionsPage() {
     try {
       await bankApi.delete(transactionId)
       await loadTransactions()
+      await loadSummary()
     } catch (error) {
       console.error('Failed to delete transaction:', error)
       alert('Failed to delete transaction')
@@ -434,12 +441,21 @@ export default function TransactionsPage() {
               placeholder="Search by description..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && loadTransactions()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  loadTransactions()
+                  loadSummary()
+                }
+              }}
               className="pl-9"
             />
             {searchQuery && (
               <button
-                onClick={() => setSearchQuery('')}
+                onClick={() => {
+                  setSearchQuery('')
+                  loadTransactions()
+                  loadSummary()
+                }}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 <X className="h-4 w-4" />

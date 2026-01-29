@@ -27,9 +27,6 @@ import {
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
-const SIDEBAR_WIDTH = "16rem"
-const SIDEBAR_WIDTH_MOBILE = "18rem"
-const SIDEBAR_WIDTH_ICON = "3rem"
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
 
 type SidebarContextProps = {
@@ -131,13 +128,7 @@ function SidebarProvider({
       <TooltipProvider delayDuration={0}>
         <div
           data-slot="sidebar-wrapper"
-          style={
-            {
-              "--sidebar-width": SIDEBAR_WIDTH,
-              "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
-              ...style,
-            } as React.CSSProperties
-          }
+          style={style}
           className={cn(
             "group/sidebar-wrapper has-data-[variant=inset]:bg-sidebar flex min-h-svh w-full",
             className
@@ -187,12 +178,7 @@ function Sidebar({
           data-sidebar="sidebar"
           data-slot="sidebar"
           data-mobile="true"
-          className="bg-sidebar text-sidebar-foreground w-[var(--sidebar-width)] p-0 [&>button]:hidden"
-          style={
-            {
-              "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
-            } as React.CSSProperties
-          }
+          className="bg-sidebar text-sidebar-foreground w-[var(--sidebar-width-mobile)] p-0 [&>button]:hidden"
           side={side}
         >
           <SheetHeader className="sr-only">
@@ -235,7 +221,7 @@ function Sidebar({
             : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
           // Adjust the padding for floating and inset variants.
           variant === "floating" || variant === "inset"
-            ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+theme(spacing.4)+2px)]"
+            ? "p-1 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+theme(spacing.4)+2px)]"
             : "group-data-[collapsible=icon]:w-[var(--sidebar-width-icon)] group-data-[side=left]:border-r group-data-[side=right]:border-l",
           className
         )}
