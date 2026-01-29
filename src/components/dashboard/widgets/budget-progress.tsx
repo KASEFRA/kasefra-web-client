@@ -145,7 +145,7 @@ export function BudgetProgressWidget() {
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-5">
         {/* Overall Progress */}
         <div>
           <div className="flex justify-between items-center mb-2">
@@ -195,7 +195,7 @@ export function BudgetProgressWidget() {
         )}
 
         {/* Top Categories */}
-        <div className="space-y-4">
+        <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-semibold">Top Spending Categories</h4>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -214,7 +214,7 @@ export function BudgetProgressWidget() {
               hasAllocation && percentUsed >= cat.alert_threshold * 100
 
             return (
-              <div key={cat.category_id} className="space-y-2">
+              <div key={cat.category_id} className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">
@@ -268,17 +268,6 @@ export function BudgetProgressWidget() {
             )
           })}
         </div>
-
-        {/* View All Button */}
-        {progress.categories.length > 3 && (
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => router.push(`/dashboard/budgets/${budget.id}`)}
-          >
-            View All {progress.categories.length} Categories
-          </Button>
-        )}
       </CardContent>
     </Card>
   )

@@ -9,7 +9,16 @@ import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { budgetsApi } from '@/lib/api'
 import type { Budget } from '@/types'
-import { Plus, Loader2, RefreshCw } from 'lucide-react'
+import {
+  Plus,
+  Loader2,
+  RefreshCw,
+  Settings2,
+  RotateCcw,
+  ArrowUp,
+  ArrowDown,
+  GripVertical,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { BudgetProgressCard } from '@/components/budgets/budget-progress-card'
 import { BudgetList } from '@/components/budgets/budget-list'
@@ -27,6 +36,34 @@ import {
 } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
 
+type BudgetsSectionId = 'current-budget' | 'budget-history'
+
+const BUDGETS_LAYOUT_KEY = 'kasefra:budgets:layout:v1'
+const DEFAULT_BUDGETS_LAYOUT: BudgetsSectionId[] = ['current-budget', 'budget-history']
+
+const isBudgetsSectionId = (value: unknown): value is BudgetsSectionId =>
+  value === 'current-budget' || value === 'budget-history'
+
+const normalizeBudgetsLayout = (layout?: BudgetsSectionId[]) => {
+  const seen = new Set<BudgetsSectionId>()
+  const next: BudgetsSectionId[] = []
+
+  ;(layout ?? []).forEach((item) => {
+    if (isBudgetsSectionId(item) && !seen.has(item)) {
+      seen.add(item)
+      next.push(item)
+    }
+  })
+
+  DEFAULT_BUDGETS_LAYOUT.forEach((item) => {
+    if (!seen.has(item)) {
+      next.push(item)
+    }
+  })
+
+  return next
+}
+
 export default function BudgetsPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -37,6 +74,9 @@ export default function BudgetsPage() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [isSyncing, setIsSyncing] = useState(false)
   const [syncKey, setSyncKey] = useState(0)
+  const [isCustomizing, setIsCustomizing] = useState(false)
+  const [sectionOrder, setSectionOrder] = useState<BudgetsSectionId[]>(DEFAULT_BUDGETS_LAYOUT)
+  const [layoutReady, setLayoutReady] = useState(false)
   const [activeTab, setActiveTab] = useState<'budgets' | 'bills'>(
     searchParams.get('tab') === 'bills' ? 'bills' : 'budgets'
   )
@@ -44,6 +84,28 @@ export default function BudgetsPage() {
   useEffect(() => {
     loadData()
   }, [])
+
+  useEffect(() => {
+    const storedLayout = window.localStorage.getItem(BUDGETS_LAYOUT_KEY)
+    if (!storedLayout) {
+      setLayoutReady(true)
+      return
+    }
+
+    try {
+      const parsed = JSON.parse(storedLayout) as BudgetsSectionId[]
+      setSectionOrder(normalizeBudgetsLayout(parsed))
+    } catch (error) {
+      console.warn('Failed to parse budgets layout preference:', error)
+    } finally {
+      setLayoutReady(true)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!layoutReady) return
+    window.localStorage.setItem(BUDGETS_LAYOUT_KEY, JSON.stringify(sectionOrder))
+  }, [sectionOrder, layoutReady])
 
   useEffect(() => {
     const tab = searchParams.get('tab')
@@ -120,6 +182,35 @@ export default function BudgetsPage() {
     router.replace(`/dashboard/budgets?tab=${nextTab}`)
   }
 
+  const handleMoveSection = (sectionId: BudgetsSectionId, direction: 'up' | 'down') => {
+    setSectionOrder((current) => {
+      const layout = normalizeBudgetsLayout(current)
+      const index = layout.indexOf(sectionId)
+
+      if (index === -1) return layout
+
+      if (direction === 'up' && index > 0) {
+        const next = [...layout]
+        const [item] = next.splice(index, 1)
+        next.splice(index - 1, 0, item)
+        return next
+      }
+
+      if (direction === 'down' && index < layout.length - 1) {
+        const next = [...layout]
+        const [item] = next.splice(index, 1)
+        next.splice(index + 1, 0, item)
+        return next
+      }
+
+      return layout
+    })
+  }
+
+  const handleResetLayout = () => {
+    setSectionOrder(DEFAULT_BUDGETS_LAYOUT)
+  }
+
   if (loading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
@@ -134,7 +225,7 @@ export default function BudgetsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
             {activeTab === 'bills' ? 'Bills' : 'Budgets'}
@@ -145,7 +236,7 @@ export default function BudgetsPage() {
               : 'Monthly budgets are created automatically. Set limits to start tracking.'}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {activeTab === 'budgets' && currentBudget ? (
             <>
               <Button onClick={() => router.push(`/dashboard/budgets/${currentBudget.id}/edit`)}>
@@ -173,6 +264,24 @@ export default function BudgetsPage() {
               Create Budget
             </Button>
           ) : null}
+          {activeTab === 'budgets' && (
+            <>
+              <Button
+                variant={isCustomizing ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setIsCustomizing((value) => !value)}
+              >
+                <Settings2 className="mr-2 h-4 w-4" />
+                {isCustomizing ? 'Finish layout' : 'Customize layout'}
+              </Button>
+              {isCustomizing && (
+                <Button variant="ghost" size="sm" onClick={handleResetLayout}>
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Reset
+                </Button>
+              )}
+            </>
+          )}
         </div>
       </div>
 
@@ -183,32 +292,77 @@ export default function BudgetsPage() {
         </TabsList>
 
         <TabsContent value="budgets" className="space-y-6">
-          {/* Current Budget Progress */}
-          {currentBudget && (
-            <div className="space-y-4">
-              <BudgetProgressCard
-                budgetId={currentBudget.id}
-                showCategories={true}
-                refreshKey={syncKey}
-              />
-            </div>
-          )}
+          {(() => {
+            const sections: Record<BudgetsSectionId, JSX.Element | null> = {
+              'current-budget': currentBudget ? (
+                <div className="space-y-4">
+                  <BudgetProgressCard
+                    budgetId={currentBudget.id}
+                    showCategories={true}
+                    refreshKey={syncKey}
+                  />
+                </div>
+              ) : null,
+              'budget-history': (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-semibold">Budgets History</h2>
+                    {budgets.length > 0 && (
+                      <p className="text-sm text-muted-foreground">
+                        {budgets.length} {budgets.length === 1 ? 'budget' : 'budgets'}
+                      </p>
+                    )}
+                  </div>
+                  <BudgetList budgets={budgets} onDelete={handleDelete} />
+                </div>
+              ),
+            }
 
-          {/* Budgets History */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Budgets History</h2>
-              {budgets.length > 0 && (
-                <p className="text-sm text-muted-foreground">
-                  {budgets.length} {budgets.length === 1 ? 'budget' : 'budgets'}
-                </p>
-              )}
-            </div>
-            <BudgetList
-              budgets={budgets}
-              onDelete={handleDelete}
-            />
-          </div>
+            const visibleSections = normalizeBudgetsLayout(sectionOrder).filter(
+              (sectionId) => sections[sectionId]
+            )
+
+            return visibleSections.map((sectionId, index) => {
+              const canMoveUp = index > 0
+              const canMoveDown = index < visibleSections.length - 1
+              const section = sections[sectionId]
+
+              if (!section) return null
+
+              return (
+                <div key={sectionId} className="relative">
+                  {isCustomizing && (
+                    <div className="absolute right-3 top-3 z-10 flex items-center gap-1 rounded-md border bg-background/95 p-1 shadow-sm">
+                      <span className="flex h-7 w-7 items-center justify-center text-muted-foreground">
+                        <GripVertical className="h-4 w-4" />
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        disabled={!canMoveUp}
+                        onClick={() => handleMoveSection(sectionId, 'up')}
+                      >
+                        <ArrowUp className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        disabled={!canMoveDown}
+                        onClick={() => handleMoveSection(sectionId, 'down')}
+                      >
+                        <ArrowDown className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  )}
+                  <div className={isCustomizing ? 'ring-1 ring-border/60 rounded-lg' : undefined}>
+                    {section}
+                  </div>
+                </div>
+              )
+            })
+          })()}
         </TabsContent>
 
         <TabsContent value="bills">

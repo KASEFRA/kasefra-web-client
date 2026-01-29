@@ -9,9 +9,20 @@ import { useEffect, useState } from 'react'
 import { networthApi } from '@/lib/api'
 import { formatCurrency } from '@/lib/currency'
 import type { NetWorthCurrent, NetWorthTrend, NetWorthAllocation } from '@/types'
-import { TrendingUp, TrendingDown, Wallet, PieChart, Calendar, Plus } from 'lucide-react'
+import { TrendingUp, TrendingDown, Wallet, PieChart, Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { NetWorthTrendChart } from '@/components/networth/networth-trend-chart'
 
 export default function NetWorthPage() {
   const [currentNetWorth, setCurrentNetWorth] = useState<NetWorthCurrent | null>(null)
@@ -26,8 +37,8 @@ export default function NetWorthPage() {
   const loadNetWorthData = async () => {
     try {
       setLoading(true)
-      const [current, trendsData, allocationData] = await Promise.all([
-        networthApi.getCurrent(),
+      const current = await networthApi.getCurrent()
+      const [trendsData, allocationData] = await Promise.all([
         networthApi.getTrends(),
         networthApi.getAllocation(),
       ])
@@ -41,16 +52,6 @@ export default function NetWorthPage() {
     }
   }
 
-  const handleCreateSnapshot = async () => {
-    try {
-      await networthApi.createSnapshot()
-      alert('Snapshot created successfully!')
-      await loadNetWorthData()
-    } catch (error) {
-      console.error('Failed to create snapshot:', error)
-      alert('Failed to create snapshot')
-    }
-  }
 
   const formatPercentage = (value: number | null) => {
     if (value === null) return 'N/A'
@@ -64,6 +65,9 @@ export default function NetWorthPage() {
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ')
   }
+
+  const assetBreakdown = currentNetWorth?.assets_breakdown || []
+  const liabilityBreakdown = currentNetWorth?.liabilities_breakdown || []
 
   if (loading) {
     return (
@@ -98,9 +102,8 @@ export default function NetWorthPage() {
             Track your total wealth over time
           </p>
         </div>
-        <Button onClick={handleCreateSnapshot}>
-          <Plus className="mr-2 h-4 w-4" />
-          Create Snapshot
+        <Button variant="outline" onClick={loadNetWorthData}>
+          Refresh
         </Button>
       </div>
 
@@ -164,6 +167,124 @@ export default function NetWorthPage() {
           </div>
         </div>
       </div>
+
+      {/* Net Worth Breakdown */}
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div>
+              <CardTitle>Net Worth Breakdown</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Net Worth = Total Assets - Total Liabilities
+              </p>
+            </div>
+            <div className="text-sm font-semibold text-foreground">
+              {formatCurrency(currentNetWorth.total_assets)} -{' '}
+              {formatCurrency(currentNetWorth.total_liabilities)} ={' '}
+              {formatCurrency(currentNetWorth.net_worth)}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div className="rounded-lg border border-border">
+              <div className="flex items-center justify-between border-b border-border px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Assets</p>
+                  <p className="text-xs text-muted-foreground">Sum of all asset accounts</p>
+                </div>
+                <Badge variant="outline">
+                  {formatCurrency(currentNetWorth.total_assets)}
+                </Badge>
+              </div>
+              {assetBreakdown.length === 0 ? (
+                <div className="px-4 py-6 text-sm text-muted-foreground">
+                  No asset accounts found.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Account</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead className="text-right">Balance</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {assetBreakdown.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell className="font-medium">{item.account_name}</TableCell>
+                          <TableCell>{formatAccountType(item.account_type)}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">
+                              {formatAccountType(item.category)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-semibold text-green-700">
+                            {formatCurrency(item.balance)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-lg border border-border">
+              <div className="flex items-center justify-between border-b border-border px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Liabilities</p>
+                  <p className="text-xs text-muted-foreground">Sum of all liability accounts</p>
+                </div>
+                <Badge variant="outline">
+                  {formatCurrency(currentNetWorth.total_liabilities)}
+                </Badge>
+              </div>
+              {liabilityBreakdown.length === 0 ? (
+                <div className="px-4 py-6 text-sm text-muted-foreground">
+                  No liability accounts found.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Account</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead className="text-right">Balance</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {liabilityBreakdown.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell className="font-medium">{item.account_name}</TableCell>
+                          <TableCell>{formatAccountType(item.account_type)}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">
+                              {formatAccountType(item.category)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-semibold text-red-700">
+                            {formatCurrency(item.balance)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+
+      {trends && <NetWorthTrendChart trends={trends} />}
+
 
       {/* Trends */}
       {trends && (

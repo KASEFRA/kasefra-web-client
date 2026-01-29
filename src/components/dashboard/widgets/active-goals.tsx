@@ -144,7 +144,7 @@ export function ActiveGoalsWidget() {
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4">
         {goals.map((goal) => {
           const progress = goal.target_amount > 0
             ? (goal.current_amount / goal.target_amount) * 100
@@ -157,7 +157,7 @@ export function ActiveGoalsWidget() {
           return (
             <div
               key={goal.id}
-              className="space-y-3 p-4 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer"
+              className="space-y-2.5 p-3 rounded-md border hover:bg-muted/50 transition-colors cursor-pointer"
               onClick={() => router.push(`/dashboard/goals/${goal.id}`)}
             >
               {/* Goal Header */}
@@ -234,15 +234,6 @@ export function ActiveGoalsWidget() {
             </div>
           )
         })}
-
-        {/* View All Goals Button */}
-        <Button
-          variant="outline"
-          className="w-full"
-          onClick={() => router.push('/dashboard/goals')}
-        >
-          View All Goals
-        </Button>
       </CardContent>
     </Card>
   )

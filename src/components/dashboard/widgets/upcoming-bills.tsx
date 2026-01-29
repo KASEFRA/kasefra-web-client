@@ -139,15 +139,15 @@ export function UpcomingBillsWidget() {
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3">
         {/* Total Amount Due */}
-        <div className="rounded-lg bg-muted p-4">
+        <div className="rounded-md border bg-muted/40 p-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <DollarSign className="h-5 w-5 text-muted-foreground" />
               <span className="text-sm font-medium">Total Due</span>
             </div>
-            <span className="text-2xl font-bold">{formatCurrency(totalAmount)}</span>
+            <span className="text-xl font-bold">{formatCurrency(totalAmount)}</span>
           </div>
         </div>
 
@@ -161,7 +161,7 @@ export function UpcomingBillsWidget() {
             return (
               <div
                 key={bill.id}
-                className={`flex items-center justify-between space-x-4 rounded-lg border p-3 transition-colors hover:bg-muted/50 cursor-pointer ${
+                className={`flex items-center justify-between space-x-4 rounded-md border p-2.5 transition-colors hover:bg-muted/50 cursor-pointer ${
                   isDueToday ? 'border-red-300 bg-red-50 dark:bg-red-950/20' : ''
                 }`}
                 onClick={() => router.push('/dashboard/budgets?tab=bills')}
@@ -169,7 +169,7 @@ export function UpcomingBillsWidget() {
                 {/* Icon and Info */}
                 <div className="flex items-center space-x-3 flex-1 min-w-0">
                   <div
-                    className={`rounded-full p-2 ${
+                    className={`rounded-full p-1.5 ${
                       isDueToday
                         ? 'bg-red-100 dark:bg-red-900/20'
                         : isDueSoon
@@ -219,15 +219,6 @@ export function UpcomingBillsWidget() {
             )
           })}
         </div>
-
-        {/* View All Bills */}
-        <Button
-          variant="outline"
-          className="w-full"
-          onClick={() => router.push('/dashboard/budgets?tab=bills')}
-        >
-          View All Upcoming Bills
-        </Button>
       </CardContent>
     </Card>
   )
