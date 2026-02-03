@@ -18,12 +18,14 @@ import {
   ArrowUp,
   ArrowDown,
   GripVertical,
+  Sparkles,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { BudgetProgressCard } from '@/components/budgets/budget-progress-card'
 import { BudgetList } from '@/components/budgets/budget-list'
 import { BillsTab } from '@/components/bills/bills-tab'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Badge } from '@/components/ui/badge'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -211,6 +213,17 @@ export default function BudgetsPage() {
     setSectionOrder(DEFAULT_BUDGETS_LAYOUT)
   }
 
+  const formatPeriodLabel = (period?: string) => {
+    if (!period) return 'Monthly'
+    const map: Record<string, string> = {
+      weekly: 'Weekly',
+      monthly: 'Monthly',
+      quarterly: 'Quarterly',
+      yearly: 'Yearly',
+    }
+    return map[period] || period
+  }
+
   if (loading) {
     return (
       <div className="flex min-h-[400px] items-center justify-center">
@@ -223,17 +236,21 @@ export default function BudgetsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+      <div className="flex flex-col gap-4 rounded-xl border border-border/60 bg-card/70 p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Sparkles className="h-4 w-4" />
+            <span>{activeTab === 'bills' ? 'Recurring payments' : 'Spending guardrails'}</span>
+          </div>
           <h1 className="text-3xl font-bold tracking-tight">
             {activeTab === 'bills' ? 'Bills' : 'Budgets'}
           </h1>
           <p className="text-muted-foreground">
             {activeTab === 'bills'
               ? 'Track recurring payments and due dates in one place.'
-              : 'Monthly budgets are created automatically. Set limits to start tracking.'}
+              : 'Budgets are created automatically each period. Set limits to stay on track.'}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -286,7 +303,7 @@ export default function BudgetsPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-        <TabsList>
+        <TabsList className="rounded-full border border-border/60 bg-card/70 p-1">
           <TabsTrigger value="budgets">Budgets</TabsTrigger>
           <TabsTrigger value="bills">Bills</TabsTrigger>
         </TabsList>
@@ -296,17 +313,39 @@ export default function BudgetsPage() {
             const sections: Record<BudgetsSectionId, JSX.Element | null> = {
               'current-budget': currentBudget ? (
                 <div className="space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        Active {formatPeriodLabel(currentBudget.period)} budget overview.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">{formatPeriodLabel(currentBudget.period)}</Badge>
+                      <Badge>Active</Badge>
+                    </div>
+                  </div>
                   <BudgetProgressCard
                     budgetId={currentBudget.id}
                     showCategories={true}
                     refreshKey={syncKey}
                   />
                 </div>
-              ) : null,
+              ) : (
+                <div className="rounded-xl border border-dashed border-border/60 bg-card/60 p-6 text-center">
+                  <p className="text-lg font-semibold">No active budget</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Create a budget to start tracking spending by category.
+                  </p>
+                  <Button className="mt-4" onClick={() => router.push('/dashboard/budgets/new')}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create Budget
+                  </Button>
+                </div>
+              ),
               'budget-history': (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold">Budgets History</h2>
+                    <h2 className="text-xl font-semibold">Budget History</h2>
                     {budgets.length > 0 && (
                       <p className="text-sm text-muted-foreground">
                         {budgets.length} {budgets.length === 1 ? 'budget' : 'budgets'}

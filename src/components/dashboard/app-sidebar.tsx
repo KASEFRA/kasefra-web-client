@@ -37,6 +37,13 @@ import { NavSecondary } from "@/components/dashboard/nav-secondary"
 import { NavUser } from "@/components/dashboard/nav-user"
 import { useAuth } from "@/components/providers/auth-provider"
 
+const resolveAvatarUrl = (avatarUrl?: string | null) => {
+  if (!avatarUrl) return ""
+  if (avatarUrl.startsWith("http")) return avatarUrl
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+  return `${baseUrl}${avatarUrl}`
+}
+
 const navMainItems = [
   {
     title: "Dashboard",
@@ -141,7 +148,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const userData = {
     name: user?.full_name || "User",
     email: user?.email || "",
-    avatar: "/avatars/default.jpg",
+    avatar: resolveAvatarUrl(user?.avatar_url),
   }
 
   return (

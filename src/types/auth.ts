@@ -26,6 +26,7 @@ export interface UserResponse {
   full_name: string
   is_active: boolean
   is_superuser: boolean
+  avatar_url?: string | null
   created_at: string
   updated_at: string
 }
@@ -36,5 +37,5 @@ export interface AuthContextType {
   login: (data: LoginRequest) => Promise<void>
   signup: (data: SignupRequest) => Promise<void>
   logout: () => void
-  refreshUser: () => Promise<void>
+  refreshUser: (force?: boolean) => Promise<void>
 }

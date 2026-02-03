@@ -5,19 +5,81 @@
  * User profile and application settings
  */
 
-import { useState } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { useAuth } from '@/components/providers/auth-provider'
-import { User, Lock, Bell, Globe, Shield, Mail } from 'lucide-react'
+import { User, Lock, Bell, Globe, Shield } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { authAPI } from '@/lib/api/auth'
+import { toast } from 'sonner'
 
 export default function SettingsPage() {
-  const { user } = useAuth()
+  const { user, refreshUser } = useAuth()
   const [loading, setLoading] = useState(false)
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
+  const [avatarUploading, setAvatarUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    return () => {
+      if (avatarPreview) {
+        URL.revokeObjectURL(avatarPreview)
+      }
+    }
+  }, [avatarPreview])
+
+  const resolveAvatarUrl = (avatarUrl?: string | null) => {
+    if (!avatarUrl) return ''
+    if (avatarUrl.startsWith('http')) return avatarUrl
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+    return `${baseUrl}${avatarUrl}`
+  }
+
+  const avatarSrc = avatarPreview || resolveAvatarUrl(user?.avatar_url)
+
+  const handleAvatarSelect = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) {
+      setAvatarFile(null)
+      setAvatarPreview(null)
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size must be 5MB or less.')
+      return
+    }
+    if (avatarPreview) {
+      URL.revokeObjectURL(avatarPreview)
+    }
+    setAvatarFile(file)
+    setAvatarPreview(URL.createObjectURL(file))
+  }
+
+  const handleAvatarUpload = async () => {
+    if (!avatarFile) return
+    try {
+      setAvatarUploading(true)
+      await authAPI.uploadAvatar(avatarFile)
+      await refreshUser(true)
+      toast.success('Profile photo updated.')
+      setAvatarFile(null)
+      setAvatarPreview(null)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    } catch (error: any) {
+      console.error('Failed to upload avatar:', error)
+      toast.error(error.response?.data?.detail || 'Failed to upload photo.')
+    } finally {
+      setAvatarUploading(false)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -41,6 +103,46 @@ export default function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="flex flex-wrap items-center gap-4">
+            <Avatar className="h-16 w-16">
+              {avatarSrc ? <AvatarImage src={avatarSrc} alt={user?.full_name || 'User'} /> : null}
+              <AvatarFallback className="text-lg">
+                {user?.full_name?.charAt(0).toUpperCase() || 'U'}
+              </AvatarFallback>
+            </Avatar>
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  Upload photo
+                </Button>
+                {avatarFile && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleAvatarUpload}
+                    disabled={avatarUploading}
+                  >
+                    {avatarUploading ? 'Uploading...' : 'Save photo'}
+                  </Button>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                JPG, PNG, WEBP, or GIF. Max 5MB.
+              </p>
+              <Input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarSelect}
+              />
+            </div>
+          </div>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="full_name">Full Name</Label>

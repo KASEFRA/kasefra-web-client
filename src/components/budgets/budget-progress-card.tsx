@@ -103,9 +103,9 @@ export function BudgetProgressCard({
         <div className="flex items-start justify-between">
           <div>
             <CardTitle>{progress.budget_name}</CardTitle>
-            <CardDescription>
+            {/* <CardDescription>
               {formatDate(progress.start_date)} - {progress.end_date ? formatDate(progress.end_date) : 'Ongoing'}
-            </CardDescription>
+            </CardDescription> */}
           </div>
           <Badge variant={progress.is_over_budget ? 'destructive' : 'default'}>
             {progress.period}
@@ -205,19 +205,26 @@ export function BudgetProgressCard({
         {/* Category Progress */}
         {showCategories && progress.categories.length > 0 && (
           <div className="space-y-4 pt-4 border-t">
-            <h4 className="text-sm font-semibold">Category Breakdown</h4>
-            {progress.categories.map((category) => (
-              <CategoryProgressItem
-                key={category.id}
-                category={category}
-                displayName={
-                  category.category_name ||
-                  categories.get(category.category_id)?.name ||
-                  'Uncategorized'
-                }
-                totalSpent={totalSpent}
-              />
-            ))}
+            <div>
+              <h4 className="text-sm font-semibold">Category Breakdown</h4>
+              <p className="text-xs text-muted-foreground">
+                Track spending against each category allocation.
+              </p>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              {progress.categories.map((category) => (
+                <CategoryProgressItem
+                  key={category.id}
+                  category={category}
+                  displayName={
+                    category.category_name ||
+                    categories.get(category.category_id)?.name ||
+                    'Uncategorized'
+                  }
+                  totalSpent={totalSpent}
+                />
+              ))}
+            </div>
           </div>
         )}
       </CardContent>
@@ -245,56 +252,96 @@ function CategoryProgressItem({
       : 0
   const isOverBudget = hasAllocation && (category.is_over_budget || false)
   const isNearLimit = hasAllocation && !isOverBudget && percentUsed >= thresholdPct
+  const status = isOverBudget
+    ? {
+        label: 'Over budget',
+        variant: 'destructive' as const,
+        className: '',
+      }
+    : isNearLimit
+      ? {
+          label: 'Near limit',
+          variant: 'outline' as const,
+          className: 'border-yellow-300 bg-yellow-50 text-yellow-700',
+        }
+      : hasAllocation
+        ? {
+            label: 'On track',
+            variant: 'outline' as const,
+            className: 'border-green-300 bg-green-50 text-green-700',
+          }
+        : {
+            label: 'No limit',
+            variant: 'secondary' as const,
+            className: '',
+          }
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between text-sm">
-        <div className="flex items-center gap-2">
-          <span className="font-medium">{displayName}</span>
-          {isOverBudget && <AlertCircle className="h-4 w-4 text-red-600" />}
-          {isNearLimit && <TrendingUp className="h-4 w-4 text-yellow-600" />}
-          {!isOverBudget && !isNearLimit && percentUsed > 0 && hasAllocation && (
-            <CheckCircle className="h-4 w-4 text-green-600" />
+    <div className="rounded-lg border bg-background p-3 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2 text-sm font-semibold">
+            <span>{displayName}</span>
+            {isOverBudget && <AlertCircle className="h-4 w-4 text-red-600" />}
+            {isNearLimit && <TrendingUp className="h-4 w-4 text-yellow-600" />}
+            {!isOverBudget && !isNearLimit && percentUsed > 0 && hasAllocation && (
+              <CheckCircle className="h-4 w-4 text-green-600" />
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {hasAllocation ? 'Budgeted category' : 'Tracking spend only'}
+          </p>
+        </div>
+        <Badge variant={status.variant} className={status.className}>
+          {status.label}
+        </Badge>
+      </div>
+
+      <div className="mt-3 space-y-2">
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>
+            {percentUsed.toFixed(1)}% {hasAllocation ? 'used' : 'of spend'}
+          </span>
+          {hasAllocation ? (
+            <span
+              className={
+                category.remaining_amount && category.remaining_amount < 0
+                  ? 'text-red-600'
+                  : 'text-green-600'
+              }
+            >
+              {formatCurrency(Math.abs(category.remaining_amount || 0))}{' '}
+              {category.remaining_amount && category.remaining_amount < 0 ? 'over' : 'left'}
+            </span>
+          ) : (
+            <span className="text-muted-foreground">No limit</span>
           )}
         </div>
-        {hasAllocation ? (
-          <span className={isOverBudget ? 'text-red-600 font-semibold' : ''}>
-            {formatCurrency(category.spent_amount)} / {formatCurrency(category.allocated_amount)}
-          </span>
-        ) : (
-          <span className="text-muted-foreground">{formatCurrency(category.spent_amount)} spent</span>
-        )}
+        <Progress
+          value={Math.min(percentUsed, 100)}
+          className={
+            isOverBudget
+              ? 'h-2 bg-red-100 [&>div]:bg-red-600'
+              : isNearLimit
+                ? 'h-2 bg-yellow-100 [&>div]:bg-yellow-600'
+                : !hasAllocation
+                  ? 'h-2 bg-muted [&>div]:bg-muted-foreground/30'
+                  : 'h-2'
+          }
+        />
       </div>
-      <Progress
-        value={Math.min(percentUsed, 100)}
-        className={
-          isOverBudget
-            ? 'bg-red-100 [&>div]:bg-red-600'
-            : isNearLimit
-              ? 'bg-yellow-100 [&>div]:bg-yellow-600'
-              : !hasAllocation
-                ? 'bg-muted [&>div]:bg-muted-foreground/30'
-                : ''
-        }
-      />
-      <div className="flex justify-between text-xs text-muted-foreground">
-        <span>
-          {percentUsed.toFixed(1)}% {hasAllocation ? 'used' : 'of spend'}
-        </span>
-        {hasAllocation ? (
-          <span
-            className={
-              category.remaining_amount && category.remaining_amount < 0
-                ? 'text-red-600'
-                : 'text-green-600'
-            }
-          >
-            {formatCurrency(Math.abs(category.remaining_amount || 0))}{' '}
-            {category.remaining_amount && category.remaining_amount < 0 ? 'over' : 'left'}
-          </span>
-        ) : (
-          <span className="text-muted-foreground">No limit</span>
-        )}
+
+      <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+        <div className="rounded-md border bg-muted/30 p-2">
+          <div className="text-muted-foreground">Spent</div>
+          <div className="text-sm font-semibold">{formatCurrency(category.spent_amount)}</div>
+        </div>
+        <div className="rounded-md border bg-muted/30 p-2">
+          <div className="text-muted-foreground">{hasAllocation ? 'Allocated' : 'Limit'}</div>
+          <div className="text-sm font-semibold">
+            {hasAllocation ? formatCurrency(category.allocated_amount) : '—'}
+          </div>
+        </div>
       </div>
     </div>
   )
