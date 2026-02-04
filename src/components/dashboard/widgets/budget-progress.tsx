@@ -17,7 +17,7 @@ import { Badge } from '@/components/ui/badge'
 import { PieChart, AlertCircle, ArrowRight, TrendingUp } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 
-export function BudgetProgressWidget() {
+export default function BudgetProgressWidget() {
   const router = useRouter()
   const [budget, setBudget] = useState<Budget | null>(null)
   const [progress, setProgress] = useState<BudgetProgress | null>(null)
@@ -25,8 +25,10 @@ export function BudgetProgressWidget() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    loadData()
-  }, [])
+    loadData()   // when the useEffect has empty dependency array, 
+  }, []) // which mean the loadData renders at the first occurance only
+// when there is no dependency array, it runs after every render
+// ✅ Common for initial data fetching
 
   const loadData = async () => {
     try {
@@ -106,15 +108,11 @@ export function BudgetProgressWidget() {
     )
   }
 
-  // Calculate overall budget stats
-  const totalAllocated = progress.categories.reduce(
-    (sum, cat) => sum + cat.allocated_amount,
-    0
-  )
-  const totalSpent = progress.categories.reduce((sum, cat) => sum + cat.spent_amount, 0)
-  const hasLimits = totalAllocated > 0
-  const overallPercent = hasLimits ? (totalSpent / totalAllocated) * 100 : 0
-  const remaining = totalAllocated - totalSpent
+  // Calculate overall budget stats (match the Budget page calculations)
+  const hasLimits = progress.total_allocated > 0
+  const totalSpent = progress.total_spent
+  const overallPercent = hasLimits ? Number(progress.percentage_used || 0) : 0
+  const remaining = progress.total_remaining
   const totalSpentAmount = totalSpent
 
   // Get top 3 categories by spending
@@ -123,9 +121,12 @@ export function BudgetProgressWidget() {
     .slice(0, 3)
 
   // Check for over-budget categories
-  const overBudgetCount = progress.categories.filter(
-    (cat) => cat.allocated_amount > 0 && cat.spent_amount > cat.allocated_amount
-  ).length
+  const overBudgetCount =
+    typeof progress.categories_over_budget === 'number'
+      ? progress.categories_over_budget
+      : progress.categories.filter(
+          (cat) => cat.allocated_amount > 0 && (cat.is_over_budget || false)
+        ).length
 
   return (
     <Card>
@@ -160,7 +161,15 @@ export function BudgetProgressWidget() {
           </div>
           <Progress
             value={hasLimits ? Math.min(overallPercent, 100) : 100}
-            className={hasLimits ? 'h-2' : 'h-2 bg-muted [&>div]:bg-muted-foreground/30'}
+            className={
+              hasLimits
+                ? progress.is_over_budget
+                  ? 'h-2 bg-red-100 [&>div]:bg-red-500'
+                  : overallPercent >= 80
+                    ? 'h-2 bg-yellow-100 [&>div]:bg-yellow-500'
+                    : 'h-2'
+                : 'h-2 bg-muted [&>div]:bg-muted-foreground/30'
+            }
           />
           <div className="flex justify-between items-center mt-2">
             {hasLimits ? (
@@ -168,8 +177,12 @@ export function BudgetProgressWidget() {
                 <span className="text-xs text-muted-foreground">
                   {formatCurrency(totalSpent)} spent
                 </span>
-                <span className="text-xs text-muted-foreground">
-                  {formatCurrency(remaining)} remaining
+                <span
+                  className={`text-xs ${
+                    remaining < 0 ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground'
+                  }`}
+                >
+                  {formatCurrency(Math.abs(remaining))} {remaining < 0 ? 'over' : 'remaining'}
                 </span>
               </>
             ) : (
@@ -204,21 +217,25 @@ export function BudgetProgressWidget() {
           {topCategories.map((cat) => {
             const category = categories.get(cat.category_id)
             const hasAllocation = cat.allocated_amount > 0
-            const percentUsed = hasAllocation
+            const computedPct = hasAllocation
               ? (cat.spent_amount / cat.allocated_amount) * 100
               : totalSpentAmount > 0
-              ? (cat.spent_amount / totalSpentAmount) * 100
-              : 0
-            const isOverBudget = hasAllocation && percentUsed >= 100
+                ? (cat.spent_amount / totalSpentAmount) * 100
+                : 0
+            const percentUsed = hasAllocation
+              ? Number(cat.percentage_used ?? computedPct)
+              : computedPct
+            const isOverBudget =
+              hasAllocation && ((cat.is_over_budget || false) || percentUsed >= 100)
             const isNearLimit =
-              hasAllocation && percentUsed >= cat.alert_threshold * 100
+              hasAllocation && !isOverBudget && percentUsed >= cat.alert_threshold * 100
 
             return (
               <div key={cat.category_id} className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">
-                      {category?.name || 'Unknown Category'}
+                      {cat.category_name || category?.name || 'Uncategorized'}
                     </span>
                     {isOverBudget && (
                       <Badge variant="destructive" className="text-xs">

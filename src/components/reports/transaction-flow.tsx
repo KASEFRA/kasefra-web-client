@@ -2,7 +2,7 @@
 
 /**
  * Transaction Flow Report
- * Visualizes income/expense branches in a Sankey-style flow (per transaction).
+ * Visualizes income/expense branches in a Sankey-style flow grouped by category.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -10,9 +10,9 @@ import { format, startOfMonth, subMonths } from 'date-fns'
 import type { DateRange } from 'react-day-picker'
 import { ArrowRightLeft, RefreshCcw, TrendingDown, TrendingUp } from 'lucide-react'
 
-import { accountsApi, bankApi } from '@/lib/api'
-import type { Account, BankTransaction } from '@/types'
-import { TransactionType } from '@/types'
+import { accountsApi, bankApi, categoriesApi } from '@/lib/api'
+import type { Account, BankTransaction, Category } from '@/types'
+import { CategoryType, TransactionType } from '@/types'
 import { formatCurrency } from '@/lib/currency'
 import { cn } from '@/lib/utils'
 import { TransactionSummary } from '@/components/dashboard/transaction-summary'
@@ -45,7 +45,7 @@ const VIEW_WIDTH = 1000
 const NODE_WIDTH = 220
 const CENTER_WIDTH = 180
 const SIDE_PADDING = 40
-const BASE_HEIGHT = 420
+const BASE_HEIGHT = 440
 
 interface FlowNode {
   id: string
@@ -54,11 +54,23 @@ interface FlowNode {
   amount: number
   color: string
   kind: 'income' | 'expense'
+  transactionCount: number
+  categoryCount: number
 }
 
 interface PositionedNode extends FlowNode {
   x: number
   y: number
+}
+
+interface CategoryNode {
+  id: string
+  label: string
+  amount: number
+  color: string
+  kind: 'income' | 'expense'
+  transactionCount: number
+  categoryCount: number
 }
 
 const normalizeAmount = (amount: number | string) => {
@@ -68,12 +80,6 @@ const normalizeAmount = (amount: number | string) => {
 
 const toPercent = (value: number, max: number) => `${(value / max) * 100}%`
 
-const parseTransactionDate = (dateValue: string) =>
-  new Date(`${dateValue}T00:00:00`)
-
-const formatTransactionDate = (dateValue: string) =>
-  format(parseTransactionDate(dateValue), 'MMM dd, yyyy')
-
 const distributeBetween = (count: number, start: number, end: number) => {
   if (count <= 0) return []
   if (count === 1) return [(start + end) / 2]
@@ -81,65 +87,141 @@ const distributeBetween = (count: number, start: number, end: number) => {
   return Array.from({ length: count }, (_, index) => start + index * step)
 }
 
-const sampleNodes = (nodes: FlowNode[], maxNodes: number) => {
+const INCOME_PALETTE = [
+  '#10B981',
+  '#34D399',
+  '#6EE7B7',
+  '#22C55E',
+  '#16A34A',
+  '#4ADE80',
+  '#059669',
+  '#047857',
+]
+const EXPENSE_PALETTE = [
+  '#FB7185',
+  '#F43F5E',
+  '#FDA4AF',
+  '#E11D48',
+  '#BE123C',
+  '#F87171',
+  '#DC2626',
+  '#EF4444',
+]
+
+const hashString = (value: string) => {
+  let hash = 0
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(i)
+    hash |= 0
+  }
+  return Math.abs(hash)
+}
+
+const pickColor = (seed: string, kind: 'income' | 'expense') => {
+  const palette = kind === 'income' ? INCOME_PALETTE : EXPENSE_PALETTE
+  return palette[hashString(seed) % palette.length]
+}
+
+const hexToRgba = (hex: string, alpha: number) => {
+  const clean = hex.replace('#', '')
+  const normalized = clean.length === 3
+    ? clean.split('').map((char) => char + char).join('')
+    : clean
+  const value = Number.parseInt(normalized, 16)
+  if (Number.isNaN(value)) return `rgba(0, 0, 0, ${alpha})`
+  const r = (value >> 16) & 255
+  const g = (value >> 8) & 255
+  const b = value & 255
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
+const formatCount = (value: number, label: string) =>
+  `${value} ${label}${value === 1 ? '' : 's'}`
+
+const limitNodes = (nodes: CategoryNode[], maxNodes: number, kind: 'income' | 'expense') => {
   if (nodes.length <= maxNodes || maxNodes <= 0) {
     return nodes
   }
+
+  const sorted = [...nodes].sort((a, b) => b.amount - a.amount)
   if (maxNodes === 1) {
-    return [nodes[0]]
+    const combinedAmount = sorted.reduce((sum, node) => sum + node.amount, 0)
+    const combinedTx = sorted.reduce((sum, node) => sum + node.transactionCount, 0)
+    return [
+      {
+        id: `${kind}-all`,
+        label: 'All categories',
+        amount: combinedAmount,
+        color: pickColor(`${kind}-all`, kind),
+        kind,
+        transactionCount: combinedTx,
+        categoryCount: sorted.length,
+      },
+    ]
   }
 
-  const sampled: FlowNode[] = []
-  const step = (nodes.length - 1) / (maxNodes - 1)
-  let lastIndex = -1
+  const kept = sorted.slice(0, maxNodes - 1)
+  const overflow = sorted.slice(maxNodes - 1)
+  const overflowAmount = overflow.reduce((sum, node) => sum + node.amount, 0)
+  const overflowTx = overflow.reduce((sum, node) => sum + node.transactionCount, 0)
 
-  for (let i = 0; i < maxNodes; i += 1) {
-    const index = Math.round(i * step)
-    if (index !== lastIndex) {
-      sampled.push(nodes[index])
-      lastIndex = index
-    }
+  const otherNode: CategoryNode = {
+    id: `${kind}-other`,
+    label: 'Other categories',
+    amount: overflowAmount,
+    color: pickColor(`${kind}-other`, kind),
+    kind,
+    transactionCount: overflowTx,
+    categoryCount: overflow.length,
   }
 
-  if (sampled[sampled.length - 1]?.id !== nodes[nodes.length - 1]?.id) {
-    sampled[sampled.length - 1] = nodes[nodes.length - 1]
-  }
-
-  return sampled
+  return [...kept, otherNode]
 }
 
-const buildTransactionNodes = (
+const buildCategoryNodes = (
   transactions: BankTransaction[],
-  accountMap: Map<string, string>,
+  categoryMap: Map<string, Category>,
   kind: 'income' | 'expense'
-): FlowNode[] => {
+): CategoryNode[] => {
   const targetType = kind === 'income' ? TransactionType.CREDIT : TransactionType.DEBIT
+  const targetCategoryType = kind === 'income' ? CategoryType.INCOME : CategoryType.EXPENSE
+  const buckets = new Map<string, CategoryNode>()
 
-  const sorted = [...transactions]
-    .filter((transaction) => transaction.transaction_type === targetType)
-    .sort((a, b) => {
-      const dateDiff =
-        parseTransactionDate(a.transaction_date).getTime() -
-        parseTransactionDate(b.transaction_date).getTime()
-      if (dateDiff !== 0) return dateDiff
-      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-    })
+  transactions.forEach((transaction) => {
+    if (transaction.transaction_type !== targetType) return
+    const amount = normalizeAmount(transaction.amount)
+    if (amount <= 0) return
 
-  return sorted.map((transaction) => {
-    const accountName = accountMap.get(transaction.account_id) ?? 'Account'
-    return {
-      id: transaction.id,
-      label: transaction.description,
-      meta: `${accountName} • ${formatTransactionDate(transaction.transaction_date)}`,
-      amount: normalizeAmount(transaction.amount),
-      color: kind === 'income' ? '#34d399' : '#fb7185',
+    const category = transaction.category_id
+      ? categoryMap.get(transaction.category_id) ?? null
+      : null
+    const categoryName = category?.name
+      ?? (kind === 'income' ? 'Uncategorized income' : 'Uncategorized expense')
+    const categoryIcon = category?.icon ?? null
+    const categoryId = category?.id ?? 'uncategorized'
+    const bucketId = `${kind}-${categoryId}`
+
+    const bucket = buckets.get(bucketId) ?? {
+      id: bucketId,
+      label: categoryIcon ? `${categoryIcon} ${categoryName}` : categoryName,
+      amount: 0,
+      color: pickColor(`${bucketId}-${category?.category_type ?? targetCategoryType}`, kind),
       kind,
+      transactionCount: 0,
+      categoryCount: 1,
     }
+
+    bucket.amount += amount
+    bucket.transactionCount += 1
+    buckets.set(bucketId, bucket)
   })
+
+  return Array.from(buckets.values()).sort((a, b) => b.amount - a.amount)
 }
 
 export function TransactionFlowReport() {
   const [accounts, setAccounts] = useState<Account[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
   const [transactions, setTransactions] = useState<BankTransaction[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -150,16 +232,20 @@ export function TransactionFlowReport() {
   const [detailLevel, setDetailLevel] = useState<number[]>([8])
 
   useEffect(() => {
-    const loadAccounts = async () => {
+    const loadLookups = async () => {
       try {
-        const response = await accountsApi.getAll()
-        setAccounts(response.accounts.filter((account) => account.is_active))
+        const [accountsResponse, categoriesResponse] = await Promise.all([
+          accountsApi.getAll(),
+          categoriesApi.getAll(),
+        ])
+        setAccounts(accountsResponse.accounts.filter((account) => account.is_active))
+        setCategories(categoriesResponse.categories.filter((category) => category.is_active))
       } catch (err) {
-        console.error('Failed to load accounts for reports:', err)
+        console.error('Failed to load report lookups:', err)
       }
     }
 
-    loadAccounts()
+    loadLookups()
   }, [])
 
   const loadTransactions = useCallback(async () => {
@@ -214,9 +300,9 @@ export function TransactionFlowReport() {
     loadTransactions()
   }, [loadTransactions])
 
-  const accountMap = useMemo(() => {
-    return new Map(accounts.map((account) => [account.id, account.account_name]))
-  }, [accounts])
+  const categoryMap = useMemo(() => {
+    return new Map(categories.map((category) => [category.id, category]))
+  }, [categories])
 
   const maxNodesPerSide = Math.max(4, detailLevel[0] ?? 8)
 
@@ -230,11 +316,42 @@ export function TransactionFlowReport() {
       return sum + normalizeAmount(transaction.amount)
     }, 0)
 
-    const allIncomeNodes = buildTransactionNodes(transactions, accountMap, 'income')
-    const allExpenseNodes = buildTransactionNodes(transactions, accountMap, 'expense')
+    const allIncomeNodes = buildCategoryNodes(transactions, categoryMap, 'income')
+    const allExpenseNodes = buildCategoryNodes(transactions, categoryMap, 'expense')
 
-    const incomeNodes = sampleNodes(allIncomeNodes, maxNodesPerSide)
-    const expenseNodes = sampleNodes(allExpenseNodes, maxNodesPerSide)
+    const decorateNodes = (
+      nodes: CategoryNode[],
+      total: number,
+      kind: 'income' | 'expense'
+    ): FlowNode[] => {
+      return nodes.map((node) => {
+        const kindLabel = kind === 'income' ? 'income' : 'expenses'
+        const percent = total > 0 ? (node.amount / total) * 100 : 0
+        const detailParts = [
+          formatCount(node.transactionCount, 'transaction'),
+          `${percent.toFixed(1)}% of ${kindLabel}`,
+        ]
+        if (node.categoryCount > 1) {
+          detailParts.splice(1, 0, formatCount(node.categoryCount, 'category'))
+        }
+
+        return {
+          ...node,
+          meta: detailParts.join(' • '),
+        }
+      })
+    }
+
+    const incomeNodes = decorateNodes(
+      limitNodes(allIncomeNodes, maxNodesPerSide, 'income'),
+      totalIncome,
+      'income'
+    )
+    const expenseNodes = decorateNodes(
+      limitNodes(allExpenseNodes, maxNodesPerSide, 'expense'),
+      totalExpenses,
+      'expense'
+    )
 
     return {
       incomeNodes,
@@ -247,7 +364,7 @@ export function TransactionFlowReport() {
         allIncomeNodes.length > incomeNodes.length ||
         allExpenseNodes.length > expenseNodes.length,
     }
-  }, [transactions, accountMap, maxNodesPerSide])
+  }, [transactions, categoryMap, maxNodesPerSide])
 
   const summary = useMemo(() => {
     if (transactions.length === 0) return null
@@ -288,7 +405,7 @@ export function TransactionFlowReport() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Transaction Flow Report</h1>
           <p className="text-muted-foreground mt-2">
-            Individual income and expense transactions join into a single cash flow.
+            Category-level income and expense streams converge into a single cash flow story.
           </p>
         </div>
         <Button variant="outline" onClick={loadTransactions} disabled={loading}>
@@ -303,7 +420,7 @@ export function TransactionFlowReport() {
         <CardHeader>
           <CardTitle>Flow Timeline</CardTitle>
           <CardDescription>
-            Showing transactions for {rangeLabel}. Each transaction is drawn individually.
+            Showing grouped categories for {rangeLabel}. Larger nodes represent bigger category totals.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
@@ -331,7 +448,7 @@ export function TransactionFlowReport() {
             </div>
 
             <div className="space-y-2">
-              <Label>Transactions shown (per side)</Label>
+              <Label>Categories shown (per side)</Label>
               <div className="flex items-center gap-3">
                 <Slider
                   value={detailLevel}
@@ -345,22 +462,22 @@ export function TransactionFlowReport() {
                 </span>
               </div>
               <p className="text-xs text-muted-foreground">
-                Increase to show more individual transactions on each side.
+                Increase to show more categories on each side.
               </p>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
             <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-200">
-              <TrendingUp className="h-3 w-3" /> Income joins
+              <TrendingUp className="h-3 w-3" /> Income categories
             </Badge>
             <Badge className="border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-200">
-              <TrendingDown className="h-3 w-3" /> Expense exits
+              <TrendingDown className="h-3 w-3" /> Expense categories
             </Badge>
             <span className="ml-auto text-xs text-muted-foreground">
               {transactions.length === 0
                 ? 'No transactions loaded'
-                : `${flowData.incomeNodes.length}/${flowData.incomeCount} income · ${flowData.expenseNodes.length}/${flowData.expenseCount} expense`}
+                : `${flowData.incomeNodes.length}/${flowData.incomeCount} income categories · ${flowData.expenseNodes.length}/${flowData.expenseCount} expense categories`}
             </span>
           </div>
 
@@ -376,21 +493,21 @@ export function TransactionFlowReport() {
               <AlertTitle>Large dataset</AlertTitle>
               <AlertDescription>
                 More than {PAGE_SIZE * MAX_PAGES} transactions matched this range.
-                Increase the detail level or narrow the date range for the full flow.
+                Narrow the date range for a complete category picture.
               </AlertDescription>
             </Alert>
           )}
 
           {flowData.overflow && transactions.length > 0 && (
             <Alert>
-              <AlertTitle>Not all transactions shown</AlertTitle>
+              <AlertTitle>Not all categories shown</AlertTitle>
               <AlertDescription>
-                Increase the slider to display more individual transactions.
+                Increase the slider to display more categories.
               </AlertDescription>
             </Alert>
           )}
 
-          <div className="rounded-lg border bg-muted/30 p-4">
+          <div className="rounded-2xl border bg-gradient-to-br from-emerald-50/70 via-background to-rose-50/70 p-4 shadow-sm dark:from-emerald-950/30 dark:via-background dark:to-rose-950/30">
             {loading ? (
               <div className="space-y-4">
                 {[...Array(3)].map((_, index) => (
@@ -560,26 +677,31 @@ function SankeyFlow({
 
 function FlowNodeCard({ node, viewHeight }: { node: PositionedNode; viewHeight: number }) {
   const isIncome = node.kind === 'income'
-  const badgeClass = isIncome
-    ? 'border-emerald-200 bg-emerald-100 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-200'
-    : 'border-rose-200 bg-rose-100 text-rose-800 dark:border-rose-900 dark:bg-rose-900/40 dark:text-rose-200'
-  const cardClass = isIncome
-    ? 'border-emerald-200/70 bg-emerald-50/70 text-emerald-950 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-100'
-    : 'border-rose-200/70 bg-rose-50/70 text-rose-950 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-100'
+  const badgeStyle = {
+    backgroundColor: hexToRgba(node.color, 0.15),
+    borderColor: hexToRgba(node.color, 0.4),
+    color: node.color,
+  }
+  const cardStyle = {
+    borderColor: hexToRgba(node.color, 0.4),
+    backgroundColor: hexToRgba(node.color, isIncome ? 0.08 : 0.07),
+    boxShadow: `0 12px 28px ${hexToRgba(node.color, 0.12)}`,
+  }
 
   return (
     <div
-      className={cn('absolute w-[220px] -translate-y-1/2 rounded-lg border px-3 py-2 shadow-sm', cardClass)}
+      className={cn('absolute w-[220px] -translate-y-1/2 rounded-xl border px-3 py-2 backdrop-blur')}
       style={{
         left: toPercent(node.x, VIEW_WIDTH),
         top: toPercent(node.y, viewHeight),
+        ...cardStyle,
       }}
     >
       <div className="flex items-center justify-between gap-2">
         <span className="text-sm font-semibold">{formatCurrency(node.amount)}</span>
-        <Badge className={badgeClass}>{isIncome ? 'Income' : 'Expense'}</Badge>
+        <Badge style={badgeStyle}>{isIncome ? 'Income' : 'Expense'}</Badge>
       </div>
-      <div className="mt-1 text-xs text-muted-foreground line-clamp-2">
+      <div className="mt-1 text-xs font-medium text-foreground/90 line-clamp-2">
         {node.label}
       </div>
       <div className="mt-1 text-[11px] text-muted-foreground">
@@ -609,7 +731,7 @@ function CenterNodeCard({
 
   return (
     <div
-      className="absolute -translate-y-1/2 rounded-xl border bg-background/90 px-4 py-3 text-center shadow-sm"
+      className="absolute -translate-y-1/2 rounded-2xl border bg-background/90 px-4 py-3 text-center shadow-md"
       style={{
         left: toPercent(x, VIEW_WIDTH),
         top: toPercent(y, viewHeight),

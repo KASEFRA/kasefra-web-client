@@ -30,8 +30,13 @@ import {
 } from 'lucide-react'
 
 // Import Dashboard Widgets
+// The below imports are called named imports
 import { RecentTransactions } from '@/components/dashboard/widgets/recent-transactions'
-import { BudgetProgressWidget } from '@/components/dashboard/widgets/budget-progress'
+import BudgetProgressSummary from '@/components/dashboard/widgets/budget-progress'
+// if a module have only one funciton to export use default and export it, no named: so can use any name
+// then import isdirectly; No curly brackets needed
+// but if you export not using defaut, means you are exporting multiple functions together, you should import them using 
+// import { function1, function2 } from 'location' these are named
 import { UpcomingBillsWidget } from '@/components/dashboard/widgets/upcoming-bills'
 import { ActiveGoalsWidget } from '@/components/dashboard/widgets/active-goals'
 
@@ -54,11 +59,12 @@ const dashboardWidgets: Record<
 > = {
   'recent-transactions': {
     label: 'Recent Transactions',
-    Component: RecentTransactions,
+    Component: RecentTransactions, // when we use another name, it fails as it is named imports as it is not default export, 
+    // export function name() {...}
   },
   'budget-progress': {
     label: 'Budget Progress',
-    Component: BudgetProgressWidget,
+    Component: BudgetProgressSummary,
   },
   'upcoming-bills': {
     label: 'Upcoming Bills',
@@ -330,45 +336,45 @@ export default function DashboardPage() {
 
       {/* Quick Actions */}
 
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            <Button
-              variant="outline"
-              className="h-11 justify-start gap-2"
-              onClick={() => (window.location.href = '/dashboard/accounts')}
-            >
-              <Plus className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium">Add Account</span>
-            </Button>
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <Button
+          variant="outline"
+          className="h-11 justify-start gap-2"
+          onClick={() => (window.location.href = '/dashboard/accounts')}
+        >
+          <Plus className="h-4 w-4 text-primary" />
+          <span className="text-sm font-medium">Add Account</span>
+        </Button>
 
-            <Button
-              variant="outline"
-              className="h-11 justify-start gap-2"
-              onClick={() => (window.location.href = '/dashboard/transactions')}
-            >
-              <ArrowRightLeft className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium">New Transaction</span>
-            </Button>
+        <Button
+          variant="outline"
+          className="h-11 justify-start gap-2"
+          onClick={() => (window.location.href = '/dashboard/transactions')}
+        >
+          <ArrowRightLeft className="h-4 w-4 text-primary" />
+          <span className="text-sm font-medium">New Transaction</span>
+        </Button>
 
-            <Button
-              variant="outline"
-              className="h-11 justify-start gap-2"
-              onClick={() => (window.location.href = '/dashboard/budgets')}
-            >
-              <PieChart className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium">Create Budget</span>
-            </Button>
+        <Button
+          variant="outline"
+          className="h-11 justify-start gap-2"
+          onClick={() => (window.location.href = '/dashboard/budgets')}
+        >
+          <PieChart className="h-4 w-4 text-primary" />
+          <span className="text-sm font-medium">Create Budget</span>
+        </Button>
 
-            <Button
-              variant="outline"
-              className="h-11 justify-start gap-2"
-              onClick={() => (window.location.href = '/dashboard/goals')}
-            >
-              <Target className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium">Set Goal</span>
-            </Button>
-          </div>
-    
-  
+        <Button
+          variant="outline"
+          className="h-11 justify-start gap-2"
+          onClick={() => (window.location.href = '/dashboard/goals')}
+        >
+          <Target className="h-4 w-4 text-primary" />
+          <span className="text-sm font-medium">Set Goal</span>
+        </Button>
+      </div>
+
+
 
       {/* Dashboard Widgets */}
       <div className="grid gap-6 md:grid-cols-2 items-start">
