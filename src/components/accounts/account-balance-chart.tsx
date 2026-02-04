@@ -18,7 +18,7 @@ interface AccountBalanceChartProps {
 }
 
 export function AccountBalanceChart({ accountId, days = 30 }: AccountBalanceChartProps) {
-  const [chartData, setChartData] = useState<any[]>([])
+  const [chartData, setChartData] = useState<Array<{ date: string; balance: number }>>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -33,39 +33,14 @@ export function AccountBalanceChart({ accountId, days = 30 }: AccountBalanceChar
       const endDate = new Date()
       const startDate = subDays(endDate, days)
 
-      // Fetch transactions for the period
-      const response = await bankApi.getAll({
-        account_id: accountId,
+      const response = await bankApi.getBalanceHistory(accountId, {
         start_date: format(startDate, 'yyyy-MM-dd'),
         end_date: format(endDate, 'yyyy-MM-dd'),
-        limit: 1000,
       })
 
-      // Calculate running balance
-      const transactions = response.transactions || []
-      transactions.sort((a, b) => new Date(a.transaction_date).getTime() - new Date(b.transaction_date).getTime())
-
-      let runningBalance = 0
-      const balanceByDate = new Map<string, number>()
-
-      // Initialize with starting balance (sum of all transactions before start date)
-      // For simplicity, we'll start from 0 and calculate forward
-      transactions.forEach(txn => {
-        const dateKey = format(new Date(txn.transaction_date), 'MMM dd')
-        
-        if (txn.transaction_type === 'credit') {
-          runningBalance += txn.amount
-        } else {
-          runningBalance -= txn.amount
-        }
-
-        balanceByDate.set(dateKey, runningBalance)
-      })
-
-      // Convert to chart data format
-      const data = Array.from(balanceByDate.entries()).map(([date, balance]) => ({
-        date,
-        balance: Math.round(balance * 100) / 100,
+      const data = response.data_points.map((point) => ({
+        date: format(new Date(point.date), 'MMM dd'),
+        balance: Math.round(Number(point.balance) * 100) / 100,
       }))
 
       setChartData(data)

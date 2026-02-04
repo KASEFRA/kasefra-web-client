@@ -6,11 +6,12 @@
  */
 
 import { useEffect, useState } from 'react'
-import { bankApi, categoriesApi } from '@/lib/api'
+import { bankApi } from '@/lib/api'
 import { formatCurrency } from '@/lib/currency'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
 import { subDays, format } from 'date-fns'
+import type { AccountCategoryBreakdownItem } from '@/types'
 
 interface AccountCategoryBreakdownProps {
   accountId: string
@@ -31,7 +32,11 @@ const COLORS = [
 ]
 
 export function AccountCategoryBreakdown({ accountId, days = 30 }: AccountCategoryBreakdownProps) {
-  const [chartData, setChartData] = useState<any[]>([])
+  const [chartData, setChartData] = useState<Array<{
+    name: string
+    amount: number
+    percentage: number
+  }>>([])
   const [loading, setLoading] = useState(true)
   const [totalExpenses, setTotalExpenses] = useState(0)
 
@@ -47,70 +52,26 @@ export function AccountCategoryBreakdown({ accountId, days = 30 }: AccountCatego
       const endDate = new Date()
       const startDate = subDays(endDate, days)
 
-      // Fetch transactions and categories
-      const [transactionsResponse, categoriesResponse] = await Promise.all([
-        bankApi.getAll({
-          account_id: accountId,
-          start_date: format(startDate, 'yyyy-MM-dd'),
-          end_date: format(endDate, 'yyyy-MM-dd'),
-          transaction_type: 'debit', // Only expenses
-          limit: 1000,
-        }),
-        categoriesApi.getAll(),
-      ])
+      const breakdown = await bankApi.getAccountCategoryBreakdown(accountId, {
+        start_date: format(startDate, 'yyyy-MM-dd'),
+        end_date: format(endDate, 'yyyy-MM-dd'),
+        transaction_type: 'debit',
+        limit: 10,
+      })
 
-      const transactions = transactionsResponse.transactions || []
-      const categories = categoriesResponse.categories || []
-
-      // Group by category
-      const categoryTotals = new Map<string, { name: string; icon: string; amount: number }>()
-      let total = 0
-
-      transactions.forEach(txn => {
-        if (txn.transaction_type !== 'debit') return
-
-        total += txn.amount
-
-        if (txn.category_id) {
-          const category = categories.find(c => c.id === txn.category_id)
-          const categoryName = category ? `${category.icon} ${category.name}` : 'Unknown'
-          
-          const existing = categoryTotals.get(txn.category_id)
-          if (existing) {
-            existing.amount += txn.amount
-          } else {
-            categoryTotals.set(txn.category_id, {
-              name: categoryName,
-              icon: category?.icon || '📊',
-              amount: txn.amount,
-            })
-          }
-        } else {
-          // Uncategorized
-          const existing = categoryTotals.get('uncategorized')
-          if (existing) {
-            existing.amount += txn.amount
-          } else {
-            categoryTotals.set('uncategorized', {
-              name: '❓ Uncategorized',
-              icon: '❓',
-              amount: txn.amount,
-            })
-          }
+      const data = breakdown.categories.map((item: AccountCategoryBreakdownItem) => {
+        const name = item.category_icon
+          ? `${item.category_icon} ${item.category_name}`
+          : item.category_name
+        return {
+          name,
+          amount: Number(item.amount),
+          percentage: Number(item.percentage),
         }
       })
 
-      // Convert to array and sort by amount
-      const data = Array.from(categoryTotals.values())
-        .map(item => ({
-          ...item,
-          percentage: total > 0 ? (item.amount / total * 100).toFixed(1) : 0,
-        }))
-        .sort((a, b) => b.amount - a.amount)
-        .slice(0, 10) // Top 10 categories
-
       setChartData(data)
-      setTotalExpenses(total)
+      setTotalExpenses(Number(breakdown.total_amount))
     } catch (error) {
       console.error('Failed to load category breakdown:', error)
       setChartData([])
@@ -130,7 +91,7 @@ export function AccountCategoryBreakdown({ accountId, days = 30 }: AccountCatego
             {formatCurrency(data.amount)}
           </p>
           <p className="text-xs text-muted-foreground">
-            {data.percentage}% of total
+            {data.percentage.toFixed(1)}% of total
           </p>
         </div>
       )
@@ -139,7 +100,7 @@ export function AccountCategoryBreakdown({ accountId, days = 30 }: AccountCatego
   }
 
   const renderCustomLabel = (entry: any) => {
-    return `${entry.percentage}%`
+    return `${Number(entry.percentage).toFixed(1)}%`
   }
 
   if (loading) {
@@ -226,7 +187,7 @@ export function AccountCategoryBreakdown({ accountId, days = 30 }: AccountCatego
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-medium">{formatCurrency(item.amount)}</span>
-                <span className="text-muted-foreground">({item.percentage}%)</span>
+                <span className="text-muted-foreground">({Number(item.percentage).toFixed(1)}%)</span>
               </div>
             </div>
           ))}

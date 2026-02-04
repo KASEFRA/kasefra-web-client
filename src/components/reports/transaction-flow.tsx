@@ -10,9 +10,8 @@ import { format, startOfMonth, subMonths } from 'date-fns'
 import type { DateRange } from 'react-day-picker'
 import { ArrowRightLeft, RefreshCcw, TrendingDown, TrendingUp } from 'lucide-react'
 
-import { accountsApi, bankApi, categoriesApi } from '@/lib/api'
-import type { Account, BankTransaction, Category } from '@/types'
-import { CategoryType, TransactionType } from '@/types'
+import { accountsApi, bankApi } from '@/lib/api'
+import type { Account, TransactionFlowResponse } from '@/types'
 import { formatCurrency } from '@/lib/currency'
 import { cn } from '@/lib/utils'
 import { TransactionSummary } from '@/components/dashboard/transaction-summary'
@@ -38,9 +37,6 @@ const defaultRange: DateRange = {
   to: today,
 }
 
-const PAGE_SIZE = 1000
-const MAX_PAGES = 10
-
 const VIEW_WIDTH = 1000
 const NODE_WIDTH = 220
 const CENTER_WIDTH = 180
@@ -61,16 +57,6 @@ interface FlowNode {
 interface PositionedNode extends FlowNode {
   x: number
   y: number
-}
-
-interface CategoryNode {
-  id: string
-  label: string
-  amount: number
-  color: string
-  kind: 'income' | 'expense'
-  transactionCount: number
-  categoryCount: number
 }
 
 const normalizeAmount = (amount: number | string) => {
@@ -135,97 +121,27 @@ const hexToRgba = (hex: string, alpha: number) => {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
 
-const formatCount = (value: number, label: string) =>
-  `${value} ${label}${value === 1 ? '' : 's'}`
-
-const limitNodes = (nodes: CategoryNode[], maxNodes: number, kind: 'income' | 'expense') => {
-  if (nodes.length <= maxNodes || maxNodes <= 0) {
-    return nodes
-  }
-
-  const sorted = [...nodes].sort((a, b) => b.amount - a.amount)
-  if (maxNodes === 1) {
-    const combinedAmount = sorted.reduce((sum, node) => sum + node.amount, 0)
-    const combinedTx = sorted.reduce((sum, node) => sum + node.transactionCount, 0)
-    return [
-      {
-        id: `${kind}-all`,
-        label: 'All categories',
-        amount: combinedAmount,
-        color: pickColor(`${kind}-all`, kind),
-        kind,
-        transactionCount: combinedTx,
-        categoryCount: sorted.length,
-      },
-    ]
-  }
-
-  const kept = sorted.slice(0, maxNodes - 1)
-  const overflow = sorted.slice(maxNodes - 1)
-  const overflowAmount = overflow.reduce((sum, node) => sum + node.amount, 0)
-  const overflowTx = overflow.reduce((sum, node) => sum + node.transactionCount, 0)
-
-  const otherNode: CategoryNode = {
-    id: `${kind}-other`,
-    label: 'Other categories',
-    amount: overflowAmount,
-    color: pickColor(`${kind}-other`, kind),
-    kind,
-    transactionCount: overflowTx,
-    categoryCount: overflow.length,
-  }
-
-  return [...kept, otherNode]
-}
-
-const buildCategoryNodes = (
-  transactions: BankTransaction[],
-  categoryMap: Map<string, Category>,
+const buildFlowNodes = (
+  nodes: TransactionFlowResponse['income_nodes'],
   kind: 'income' | 'expense'
-): CategoryNode[] => {
-  const targetType = kind === 'income' ? TransactionType.CREDIT : TransactionType.DEBIT
-  const targetCategoryType = kind === 'income' ? CategoryType.INCOME : CategoryType.EXPENSE
-  const buckets = new Map<string, CategoryNode>()
-
-  transactions.forEach((transaction) => {
-    if (transaction.transaction_type !== targetType) return
-    const amount = normalizeAmount(transaction.amount)
-    if (amount <= 0) return
-
-    const category = transaction.category_id
-      ? categoryMap.get(transaction.category_id) ?? null
-      : null
-    const categoryName = category?.name
-      ?? (kind === 'income' ? 'Uncategorized income' : 'Uncategorized expense')
-    const categoryIcon = category?.icon ?? null
-    const categoryId = category?.id ?? 'uncategorized'
-    const bucketId = `${kind}-${categoryId}`
-
-    const bucket = buckets.get(bucketId) ?? {
-      id: bucketId,
-      label: categoryIcon ? `${categoryIcon} ${categoryName}` : categoryName,
-      amount: 0,
-      color: pickColor(`${bucketId}-${category?.category_type ?? targetCategoryType}`, kind),
-      kind,
-      transactionCount: 0,
-      categoryCount: 1,
-    }
-
-    bucket.amount += amount
-    bucket.transactionCount += 1
-    buckets.set(bucketId, bucket)
-  })
-
-  return Array.from(buckets.values()).sort((a, b) => b.amount - a.amount)
+): FlowNode[] => {
+  return nodes.map((node) => ({
+    id: node.id,
+    label: node.label,
+    meta: node.meta,
+    amount: normalizeAmount(node.amount),
+    color: pickColor(`${node.id}-${kind}`, kind),
+    kind,
+    transactionCount: node.transaction_count,
+    categoryCount: node.category_count,
+  }))
 }
 
 export function TransactionFlowReport() {
   const [accounts, setAccounts] = useState<Account[]>([])
-  const [categories, setCategories] = useState<Category[]>([])
-  const [transactions, setTransactions] = useState<BankTransaction[]>([])
+  const [flowResponse, setFlowResponse] = useState<TransactionFlowResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [dataCapped, setDataCapped] = useState(false)
 
   const [dateRange, setDateRange] = useState<DateRange | undefined>(defaultRange)
   const [selectedAccount, setSelectedAccount] = useState('all')
@@ -234,12 +150,8 @@ export function TransactionFlowReport() {
   useEffect(() => {
     const loadLookups = async () => {
       try {
-        const [accountsResponse, categoriesResponse] = await Promise.all([
-          accountsApi.getAll(),
-          categoriesApi.getAll(),
-        ])
+        const accountsResponse = await accountsApi.getAll()
         setAccounts(accountsResponse.accounts.filter((account) => account.is_active))
-        setCategories(categoriesResponse.categories.filter((category) => category.is_active))
       } catch (err) {
         console.error('Failed to load report lookups:', err)
       }
@@ -248,149 +160,78 @@ export function TransactionFlowReport() {
     loadLookups()
   }, [])
 
-  const loadTransactions = useCallback(async () => {
+  const loadFlow = useCallback(async () => {
     if (!dateRange?.from) {
-      setTransactions([])
+      setFlowResponse(null)
       return
     }
 
     setLoading(true)
     setError(null)
-    setDataCapped(false)
 
     const startDate = format(dateRange.from, 'yyyy-MM-dd')
     const endDate = format(dateRange.to ?? dateRange.from, 'yyyy-MM-dd')
+    const maxNodesPerSide = Math.max(4, detailLevel[0] ?? 8)
 
     try {
-      const collected: BankTransaction[] = []
-      let skip = 0
-      let page = 0
-      let totalCount = 0
-
-      do {
-        const response = await bankApi.getAll({
-          start_date: startDate,
-          end_date: endDate,
-          account_id: selectedAccount !== 'all' ? selectedAccount : undefined,
-          skip,
-          limit: PAGE_SIZE,
-        })
-
-        totalCount = response.total_count ?? response.transactions.length
-        collected.push(...response.transactions)
-        skip += PAGE_SIZE
-        page += 1
-      } while (collected.length < totalCount && page < MAX_PAGES)
-
-      if (collected.length < totalCount) {
-        setDataCapped(true)
-      }
-
-      setTransactions(collected)
+      const response = await bankApi.getTransactionFlow({
+        start_date: startDate,
+        end_date: endDate,
+        account_id: selectedAccount !== 'all' ? selectedAccount : undefined,
+        max_nodes_per_side: maxNodesPerSide,
+      })
+      setFlowResponse(response)
     } catch (err: any) {
       console.error('Failed to load transactions for flow report:', err)
       setError('Unable to load transactions for the selected range.')
-      setTransactions([])
+      setFlowResponse(null)
     } finally {
       setLoading(false)
     }
-  }, [dateRange, selectedAccount])
+  }, [dateRange, selectedAccount, detailLevel])
 
   useEffect(() => {
-    loadTransactions()
-  }, [loadTransactions])
-
-  const categoryMap = useMemo(() => {
-    return new Map(categories.map((category) => [category.id, category]))
-  }, [categories])
+    loadFlow()
+  }, [loadFlow])
 
   const maxNodesPerSide = Math.max(4, detailLevel[0] ?? 8)
 
   const flowData = useMemo(() => {
-    const totalIncome = transactions.reduce((sum, transaction) => {
-      if (transaction.transaction_type !== TransactionType.CREDIT) return sum
-      return sum + normalizeAmount(transaction.amount)
-    }, 0)
-    const totalExpenses = transactions.reduce((sum, transaction) => {
-      if (transaction.transaction_type !== TransactionType.DEBIT) return sum
-      return sum + normalizeAmount(transaction.amount)
-    }, 0)
-
-    const allIncomeNodes = buildCategoryNodes(transactions, categoryMap, 'income')
-    const allExpenseNodes = buildCategoryNodes(transactions, categoryMap, 'expense')
-
-    const decorateNodes = (
-      nodes: CategoryNode[],
-      total: number,
-      kind: 'income' | 'expense'
-    ): FlowNode[] => {
-      return nodes.map((node) => {
-        const kindLabel = kind === 'income' ? 'income' : 'expenses'
-        const percent = total > 0 ? (node.amount / total) * 100 : 0
-        const detailParts = [
-          formatCount(node.transactionCount, 'transaction'),
-          `${percent.toFixed(1)}% of ${kindLabel}`,
-        ]
-        if (node.categoryCount > 1) {
-          detailParts.splice(1, 0, formatCount(node.categoryCount, 'category'))
-        }
-
-        return {
-          ...node,
-          meta: detailParts.join(' • '),
-        }
-      })
+    if (!flowResponse) {
+      return {
+        incomeNodes: [] as FlowNode[],
+        expenseNodes: [] as FlowNode[],
+        totalIncome: 0,
+        totalExpenses: 0,
+        incomeCount: 0,
+        expenseCount: 0,
+        totalTransactions: 0,
+        overflow: false,
+      }
     }
-
-    const incomeNodes = decorateNodes(
-      limitNodes(allIncomeNodes, maxNodesPerSide, 'income'),
-      totalIncome,
-      'income'
-    )
-    const expenseNodes = decorateNodes(
-      limitNodes(allExpenseNodes, maxNodesPerSide, 'expense'),
-      totalExpenses,
-      'expense'
-    )
 
     return {
-      incomeNodes,
-      expenseNodes,
-      totalIncome,
-      totalExpenses,
-      incomeCount: allIncomeNodes.length,
-      expenseCount: allExpenseNodes.length,
-      overflow:
-        allIncomeNodes.length > incomeNodes.length ||
-        allExpenseNodes.length > expenseNodes.length,
+      incomeNodes: buildFlowNodes(flowResponse.income_nodes, 'income'),
+      expenseNodes: buildFlowNodes(flowResponse.expense_nodes, 'expense'),
+      totalIncome: normalizeAmount(flowResponse.total_income),
+      totalExpenses: normalizeAmount(flowResponse.total_expenses),
+      incomeCount: flowResponse.income_category_count,
+      expenseCount: flowResponse.expense_category_count,
+      totalTransactions: flowResponse.total_transactions,
+      overflow: flowResponse.overflow,
     }
-  }, [transactions, categoryMap, maxNodesPerSide])
+  }, [flowResponse])
 
   const summary = useMemo(() => {
-    if (transactions.length === 0) return null
-
-    return transactions.reduce(
-      (acc, txn) => {
-        const amount = normalizeAmount(txn.amount)
-        if (txn.transaction_type === TransactionType.CREDIT) {
-          acc.total_income += amount
-          acc.income_count += 1
-        } else {
-          acc.total_expenses += amount
-          acc.expense_count += 1
-        }
-        acc.net_income = acc.total_income - acc.total_expenses
-        return acc
-      },
-      {
-        total_income: 0,
-        total_expenses: 0,
-        net_income: 0,
-        income_count: 0,
-        expense_count: 0,
-      }
-    )
-  }, [transactions])
+    if (!flowResponse || flowResponse.total_transactions === 0) return null
+    return {
+      total_income: normalizeAmount(flowResponse.total_income),
+      total_expenses: normalizeAmount(flowResponse.total_expenses),
+      net_income: normalizeAmount(flowResponse.net_income),
+      income_count: flowResponse.income_count,
+      expense_count: flowResponse.expense_count,
+    }
+  }, [flowResponse])
 
   const rangeLabel = useMemo(() => {
     if (!dateRange?.from) return 'No range selected'
@@ -408,7 +249,7 @@ export function TransactionFlowReport() {
             Category-level income and expense streams converge into a single cash flow story.
           </p>
         </div>
-        <Button variant="outline" onClick={loadTransactions} disabled={loading}>
+        <Button variant="outline" onClick={loadFlow} disabled={loading}>
           <RefreshCcw className="h-4 w-4 mr-2" />
           Refresh
         </Button>
@@ -475,7 +316,7 @@ export function TransactionFlowReport() {
               <TrendingDown className="h-3 w-3" /> Expense categories
             </Badge>
             <span className="ml-auto text-xs text-muted-foreground">
-              {transactions.length === 0
+              {flowData.totalTransactions === 0
                 ? 'No transactions loaded'
                 : `${flowData.incomeNodes.length}/${flowData.incomeCount} income categories · ${flowData.expenseNodes.length}/${flowData.expenseCount} expense categories`}
             </span>
@@ -488,17 +329,7 @@ export function TransactionFlowReport() {
             </Alert>
           )}
 
-          {dataCapped && (
-            <Alert>
-              <AlertTitle>Large dataset</AlertTitle>
-              <AlertDescription>
-                More than {PAGE_SIZE * MAX_PAGES} transactions matched this range.
-                Narrow the date range for a complete category picture.
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {flowData.overflow && transactions.length > 0 && (
+          {flowData.overflow && flowData.totalTransactions > 0 && (
             <Alert>
               <AlertTitle>Not all categories shown</AlertTitle>
               <AlertDescription>
@@ -514,7 +345,7 @@ export function TransactionFlowReport() {
                   <Skeleton key={index} className="h-40 w-full" />
                 ))}
               </div>
-            ) : transactions.length === 0 ? (
+            ) : flowData.totalTransactions === 0 ? (
               <div className="py-12 text-center">
                 <div className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-muted">
                   <ArrowRightLeft className="h-6 w-6 text-muted-foreground" />

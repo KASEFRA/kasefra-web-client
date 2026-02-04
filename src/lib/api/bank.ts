@@ -8,6 +8,9 @@ import type {
   BankTransactionCreate,
   BankTransactionUpdate,
   BankTransactionListResponse,
+  TransactionFlowResponse,
+  AccountCategoryBreakdownResponse,
+  BalanceHistoryResponse,
 } from '@/types'
 
 export const bankApi = {
@@ -137,6 +140,55 @@ export const bankApi = {
     const response = await apiClient.get('/accounts/transactions/summary', {
       params: filters,
     })
+    return response.data
+  },
+
+  /**
+   * Get transaction flow breakdown
+   */
+  async getTransactionFlow(filters?: {
+    account_id?: string
+    start_date?: string
+    end_date?: string
+    max_nodes_per_side?: number
+  }): Promise<TransactionFlowResponse> {
+    const response = await apiClient.get<TransactionFlowResponse>(
+      '/accounts/transactions/flow',
+      { params: filters }
+    )
+    return response.data
+  },
+
+  /**
+   * Get category breakdown for an account
+   */
+  async getAccountCategoryBreakdown(
+    accountId: string,
+    params?: {
+      start_date?: string
+      end_date?: string
+      transaction_type?: string
+      limit?: number
+    }
+  ): Promise<AccountCategoryBreakdownResponse> {
+    const response = await apiClient.get<AccountCategoryBreakdownResponse>(
+      `/accounts/${accountId}/category-breakdown`,
+      { params }
+    )
+    return response.data
+  },
+
+  /**
+   * Get balance history for an account
+   */
+  async getBalanceHistory(
+    accountId: string,
+    params?: { start_date?: string; end_date?: string }
+  ): Promise<BalanceHistoryResponse> {
+    const response = await apiClient.get<BalanceHistoryResponse>(
+      `/accounts/${accountId}/balance-history`,
+      { params }
+    )
     return response.data
   },
 }

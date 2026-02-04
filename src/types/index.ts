@@ -301,6 +301,62 @@ export interface BankTransactionListResponse {
   total_count: number
 }
 
+export interface TransactionFlowNode {
+  id: string
+  label: string
+  meta: string
+  amount: number
+  transaction_count: number
+  category_count: number
+  percent_of_total: number
+}
+
+export interface TransactionFlowResponse {
+  account_id: string | null
+  start_date: string | null
+  end_date: string | null
+  total_income: number
+  total_expenses: number
+  net_income: number
+  income_count: number
+  expense_count: number
+  income_category_count: number
+  expense_category_count: number
+  total_transactions: number
+  income_nodes: TransactionFlowNode[]
+  expense_nodes: TransactionFlowNode[]
+  overflow: boolean
+}
+
+export interface AccountCategoryBreakdownItem {
+  category_id: string | null
+  category_name: string
+  category_icon: string | null
+  amount: number
+  transaction_count: number
+  percentage: number
+}
+
+export interface AccountCategoryBreakdownResponse {
+  account_id: string
+  start_date: string
+  end_date: string
+  total_amount: number
+  categories: AccountCategoryBreakdownItem[]
+}
+
+export interface BalanceHistoryPoint {
+  date: string
+  balance: number
+}
+
+export interface BalanceHistoryResponse {
+  account_id: string
+  start_date: string
+  end_date: string
+  data_points: BalanceHistoryPoint[]
+}
+
 // ===== INVESTMENT TYPES =====
 
 export interface InvestmentHolding {
