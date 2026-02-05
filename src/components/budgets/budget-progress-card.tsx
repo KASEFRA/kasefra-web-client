@@ -95,8 +95,6 @@ export function BudgetProgressCard({
   }
 
   const hasLimits = progress.total_allocated > 0
-  const totalSpent = progress.total_spent
-
   return (
     <Card>
       <CardHeader>
@@ -221,7 +219,6 @@ export function BudgetProgressCard({
                     categories.get(category.category_id)?.name ||
                     'Uncategorized'
                   }
-                  totalSpent={totalSpent}
                 />
               ))}
             </div>
@@ -235,23 +232,16 @@ export function BudgetProgressCard({
 interface CategoryProgressItemProps {
   category: BudgetCategory
   displayName: string
-  totalSpent: number
 }
 
 function CategoryProgressItem({
   category,
   displayName,
-  totalSpent,
 }: CategoryProgressItemProps) {
   const hasAllocation = category.allocated_amount > 0
-  const thresholdPct = Number(category.alert_threshold || 0) * 100
-  const percentUsed = hasAllocation
-    ? Number(category.percentage_used || 0)
-    : totalSpent > 0
-      ? (category.spent_amount / totalSpent) * 100
-      : 0
-  const isOverBudget = hasAllocation && (category.is_over_budget || false)
-  const isNearLimit = hasAllocation && !isOverBudget && percentUsed >= thresholdPct
+  const percentUsed = Number(category.progress_percent || 0)
+  const isOverBudget = Boolean(category.is_over_budget)
+  const isNearLimit = Boolean(category.is_near_limit)
   const status = isOverBudget
     ? {
         label: 'Over budget',

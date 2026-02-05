@@ -41,7 +41,7 @@ export function CategoryBreakdownChart({ categories }: CategoryBreakdownChartPro
           value: Number(cat.allocated_amount),
           allocated: Number(cat.allocated_amount),
           spent: Number(cat.spent_amount),
-          percentage: Number(cat.percentage_used) || 0,
+          share: Number(cat.allocated_share) || 0,
         }))
         .sort((a, b) => b.value - a.value) // Sort by allocated amount descending
     : categories
@@ -51,7 +51,7 @@ export function CategoryBreakdownChart({ categories }: CategoryBreakdownChartPro
           value: Number(cat.spent_amount),
           allocated: Number(cat.allocated_amount),
           spent: Number(cat.spent_amount),
-          percentage: 0,
+          share: Number(cat.spent_share) || 0,
         }))
         .sort((a, b) => b.value - a.value) // Sort by spent amount descending
 
@@ -73,12 +73,10 @@ export function CategoryBreakdownChart({ categories }: CategoryBreakdownChartPro
     )
   }
 
-  const totalAllocated = chartData.reduce((sum, item) => sum + item.value, 0)
-
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload
-      const percentage = ((data.value / totalAllocated) * 100).toFixed(1)
+      const percentage = Number(data.share || 0).toFixed(1)
 
       return (
         <div className="rounded-lg border bg-background p-3 shadow-md">

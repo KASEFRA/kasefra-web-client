@@ -13,6 +13,7 @@ import type {
   BudgetCategoryUpdate,
   BudgetCategoryListResponse,
   BudgetProgress,
+  BudgetBillsImpactResponse,
   RecurringBill,
   RecurringBillCreate,
   RecurringBillUpdate,
@@ -76,6 +77,22 @@ export const budgetsApi = {
    */
   async getProgress(budgetId: string): Promise<BudgetProgress> {
     const response = await apiClient.get<BudgetProgress>(`/budgets/${budgetId}/progress`)
+    return response.data
+  },
+
+  /**
+   * Get upcoming bills impact for a budget
+   */
+  async getBillsImpact(
+    budgetId: string,
+    days?: number
+  ): Promise<BudgetBillsImpactResponse> {
+    const response = await apiClient.get<BudgetBillsImpactResponse>(
+      `/budgets/${budgetId}/bills-impact`,
+      {
+        params: { days },
+      }
+    )
     return response.data
   },
 

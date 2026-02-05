@@ -34,16 +34,15 @@ export function SpendingProgressChart({ categories }: SpendingProgressChartProps
         .map((cat) => {
           const allocated = Number(cat.allocated_amount)
           const spent = Number(cat.spent_amount)
-          const percentage = (spent / allocated) * 100
 
           return {
             name: cat.category_name || 'Unknown',
             allocated,
             spent,
-            remaining: Math.max(0, allocated - spent),
-            percentage,
-            isOverBudget: spent > allocated,
-            isNearLimit: percentage >= 80 && percentage <= 100,
+            remaining: Math.max(0, Number(cat.remaining_amount ?? 0)),
+            percentage: Number(cat.percentage_used ?? 0),
+            isOverBudget: Boolean(cat.is_over_budget),
+            isNearLimit: Boolean(cat.is_near_limit),
           }
         })
         .sort((a, b) => b.percentage - a.percentage) // Sort by percentage descending

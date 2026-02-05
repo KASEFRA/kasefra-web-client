@@ -41,10 +41,7 @@ export function BudgetAlertsPanel({ budgetProgress }: BudgetAlertsPanelProps) {
   )
 
   const nearLimitCategories = budgetProgress.categories.filter(
-    (cat) =>
-      !cat.is_over_budget &&
-      cat.alert_enabled &&
-      Number(cat.percentage_used) >= cat.alert_threshold * 100
+    (cat) => !cat.is_over_budget && cat.is_near_limit && cat.alert_enabled
   )
 
   const hasAlerts = overBudgetCategories.length > 0 || nearLimitCategories.length > 0
@@ -104,7 +101,7 @@ export function BudgetAlertsPanel({ budgetProgress }: BudgetAlertsPanelProps) {
       <CardHeader>
         <CardTitle>Budget Alerts</CardTitle>
         <CardDescription>
-          {budgetProgress.categories_over_budget} over budget, {budgetProgress.categories_near_limit} near limit
+          {overBudgetCategories.length} over budget, {nearLimitCategories.length} near limit
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -123,8 +120,8 @@ export function BudgetAlertsPanel({ budgetProgress }: BudgetAlertsPanelProps) {
 
         {/* Over Budget Categories */}
         {overBudgetCategories.map((category) => {
-          const overspent = Number(category.spent_amount) - Number(category.allocated_amount)
-          const percentOver = ((overspent / Number(category.allocated_amount)) * 100).toFixed(1)
+          const overspent = Number(category.over_budget_amount || 0)
+          const percentOver = Number(category.percent_over || 0).toFixed(1)
 
           return (
             <Alert key={category.id} variant="destructive">

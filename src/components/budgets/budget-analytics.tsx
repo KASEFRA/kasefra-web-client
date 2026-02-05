@@ -53,24 +53,8 @@ export function BudgetAnalytics({ budgetProgress }: BudgetAnalyticsProps) {
     }))
   }, [budgetProgress.categories, categories])
 
-  // Calculate days in period (simplified)
-  const getDaysInPeriod = () => {
-    const start = new Date(budgetProgress.start_date)
-    const end = budgetProgress.end_date ? new Date(budgetProgress.end_date) : new Date()
-    const diffTime = Math.abs(end.getTime() - start.getTime())
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-  }
-
-  const getDaysRemaining = () => {
-    if (!budgetProgress.end_date) return null
-    const end = new Date(budgetProgress.end_date)
-    const today = new Date()
-    const diffTime = end.getTime() - today.getTime()
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-  }
-
-  const daysInPeriod = getDaysInPeriod()
-  const daysRemaining = getDaysRemaining()
+  const daysInPeriod = budgetProgress.days_in_period
+  const daysRemaining = budgetProgress.days_remaining
 
   return (
     <div className="space-y-6">

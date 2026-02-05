@@ -7,7 +7,7 @@
 
 import { useEffect, useState } from 'react'
 import { budgetsApi } from '@/lib/api'
-import type { UpcomingBillsResponse, BudgetProgress } from '@/types'
+import type { BudgetBillsImpactResponse, BudgetProgress } from '@/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { formatCurrency } from '@/lib/currency'
@@ -19,18 +19,18 @@ interface BillsIntegrationCardProps {
 }
 
 export function BillsIntegrationCard({ budgetProgress }: BillsIntegrationCardProps) {
-  const [upcomingBills, setUpcomingBills] = useState<UpcomingBillsResponse | null>(null)
+  const [impact, setImpact] = useState<BudgetBillsImpactResponse | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     loadUpcomingBills()
-  }, [])
+  }, [budgetProgress.budget_id])
 
   const loadUpcomingBills = async () => {
     try {
       setLoading(true)
-      const bills = await budgetsApi.getUpcomingBills(30)
-      setUpcomingBills(bills)
+      const billsImpact = await budgetsApi.getBillsImpact(budgetProgress.budget_id, 30)
+      setImpact(billsImpact)
     } catch (err) {
       console.error('Failed to load upcoming bills:', err)
     } finally {
@@ -38,23 +38,11 @@ export function BillsIntegrationCard({ budgetProgress }: BillsIntegrationCardPro
     }
   }
 
-  // Match bills with budget categories
-  const budgetCategoryIds = new Set(
-    budgetProgress.categories.map((cat) => cat.category_id)
-  )
-
-  const billsInBudget = upcomingBills?.bills.filter((bill) =>
-    budgetCategoryIds.has(bill.category_id)
-  ) || []
-
-  const totalBillsAmount = billsInBudget.reduce(
-    (sum, bill) => sum + Number(bill.amount),
-    0
-  )
-
-  const hasLimits = Number(budgetProgress.total_allocated) > 0
-  const totalRemaining = hasLimits ? Number(budgetProgress.total_remaining) : null
-  const projectedRemaining = hasLimits ? totalRemaining - totalBillsAmount : null
+  const billsInBudget = impact?.bills || []
+  const totalBillsAmount = Number(impact?.total_bills_amount || 0)
+  const hasLimits = Boolean(impact?.has_limits)
+  const totalRemaining = impact?.total_remaining ?? null
+  const projectedRemaining = impact?.projected_remaining ?? null
 
   if (loading) {
     return (
@@ -66,7 +54,7 @@ export function BillsIntegrationCard({ budgetProgress }: BillsIntegrationCardPro
     )
   }
 
-  if (!upcomingBills || billsInBudget.length === 0) {
+  if (!impact || billsInBudget.length === 0) {
     return (
       <Card>
         <CardHeader>
@@ -99,7 +87,7 @@ export function BillsIntegrationCard({ budgetProgress }: BillsIntegrationCardPro
           <div>
             <CardTitle>Upcoming Bills</CardTitle>
             <CardDescription>
-              {billsInBudget.length} bills due in the next 30 days
+              {impact.count} bills due in the next 30 days
             </CardDescription>
           </div>
           <Receipt className="h-5 w-5 text-muted-foreground" />

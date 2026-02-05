@@ -113,8 +113,6 @@ export default function BudgetProgressWidget() {
   const totalSpent = progress.total_spent
   const overallPercent = hasLimits ? Number(progress.percentage_used || 0) : 0
   const remaining = progress.total_remaining
-  const totalSpentAmount = totalSpent
-
   // Get top 3 categories by spending
   const topCategories = [...progress.categories]
     .sort((a, b) => b.spent_amount - a.spent_amount)
@@ -217,18 +215,9 @@ export default function BudgetProgressWidget() {
           {topCategories.map((cat) => {
             const category = categories.get(cat.category_id)
             const hasAllocation = cat.allocated_amount > 0
-            const computedPct = hasAllocation
-              ? (cat.spent_amount / cat.allocated_amount) * 100
-              : totalSpentAmount > 0
-                ? (cat.spent_amount / totalSpentAmount) * 100
-                : 0
-            const percentUsed = hasAllocation
-              ? Number(cat.percentage_used ?? computedPct)
-              : computedPct
-            const isOverBudget =
-              hasAllocation && ((cat.is_over_budget || false) || percentUsed >= 100)
-            const isNearLimit =
-              hasAllocation && !isOverBudget && percentUsed >= cat.alert_threshold * 100
+            const percentUsed = Number(cat.progress_percent || 0)
+            const isOverBudget = Boolean(cat.is_over_budget)
+            const isNearLimit = Boolean(cat.is_near_limit)
 
             return (
               <div key={cat.category_id} className="space-y-1.5">

@@ -598,6 +598,12 @@ export interface BudgetCategory {
   alert_threshold: number
   alert_enabled: boolean
   is_over_budget: boolean | null
+  is_near_limit: boolean | null
+  over_budget_amount: number | null
+  percent_over: number | null
+  allocated_share: number | null
+  spent_share: number | null
+  progress_percent: number | null
   created_at: string
   updated_at: string
 }
@@ -621,6 +627,8 @@ export interface BudgetProgress {
   period: BudgetPeriod
   start_date: string
   end_date: string | null
+  days_in_period: number
+  days_remaining: number | null
   total_allocated: number
   total_spent: number
   total_remaining: number
@@ -699,6 +707,16 @@ export interface RecurringBillListResponse {
 export interface UpcomingBillsResponse {
   bills: RecurringBill[]
   total_amount: number
+  count: number
+}
+
+export interface BudgetBillsImpactResponse {
+  budget_id: string
+  total_bills_amount: number
+  total_remaining: number | null
+  projected_remaining: number | null
+  has_limits: boolean
+  bills: RecurringBill[]
   count: number
 }
 
