@@ -12,22 +12,23 @@ import type { GoalProgress } from '@/types'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
-import { Target, TrendingUp, Calendar, AlertTriangle, CheckCircle, Clock } from 'lucide-react'
+import { Target, TrendingUp, Calendar, Clock } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 
 interface GoalProgressCardProps {
   goalId: string
   showDetails?: boolean
+  refreshKey?: number
 }
 
-export function GoalProgressCard({ goalId, showDetails = true }: GoalProgressCardProps) {
+export function GoalProgressCard({ goalId, showDetails = true, refreshKey }: GoalProgressCardProps) {
   const [progress, setProgress] = useState<GoalProgress | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     loadProgress()
-  }, [goalId])
+  }, [goalId, refreshKey])
 
   const loadProgress = async () => {
     try {
@@ -79,22 +80,28 @@ export function GoalProgressCard({ goalId, showDetails = true }: GoalProgressCar
     })
   }
 
-  const getStatusColor = (goal: GoalProgress['goal']) => {
-    if (goal.status === 'completed') return 'default'
-    if (goal.status === 'cancelled') return 'secondary'
-    if (goal.status === 'paused') return 'outline'
+  const getStatusColor = (status: GoalProgress['status']) => {
+    if (status === 'completed') return 'default'
+    if (status === 'cancelled') return 'secondary'
+    if (status === 'paused') return 'outline'
     return progress.on_track ? 'default' : 'destructive'
   }
 
-  const getStatusText = (goal: GoalProgress['goal']) => {
+  const getStatusText = (status: GoalProgress['status']) => {
     const statusMap: Record<string, string> = {
       active: progress.on_track ? 'On Track' : 'Behind Schedule',
       completed: 'Completed',
       paused: 'Paused',
       cancelled: 'Cancelled',
     }
-    return statusMap[goal.status] || goal.status
+    return statusMap[status] || status
   }
+
+  const progressPercentage = Number(progress.progress_percentage) || 0
+  const currentAmount = Number(progress.current_amount) || 0
+  const targetAmount = Number(progress.target_amount) || 0
+  const remainingAmount = Number(progress.remaining_amount) || 0
+  const requiredMonthly = Number(progress.required_monthly_contribution) || 0
 
   return (
     <Card>
@@ -103,15 +110,15 @@ export function GoalProgressCard({ goalId, showDetails = true }: GoalProgressCar
           <div className="space-y-1">
             <CardTitle className="flex items-center gap-2">
               <Target className="h-5 w-5" />
-              {progress.goal.goal_name}
+              {progress.goal_name}
             </CardTitle>
             <CardDescription>
-              {progress.goal.goal_type.replace('_', ' ').charAt(0).toUpperCase() + 
-               progress.goal.goal_type.replace('_', ' ').slice(1)}
+              {progress.goal_type.replace('_', ' ').charAt(0).toUpperCase() +
+               progress.goal_type.replace('_', ' ').slice(1)}
             </CardDescription>
           </div>
-          <Badge variant={getStatusColor(progress.goal)}>
-            {getStatusText(progress.goal)}
+          <Badge variant={getStatusColor(progress.status)}>
+            {getStatusText(progress.status)}
           </Badge>
         </div>
       </CardHeader>
@@ -120,18 +127,18 @@ export function GoalProgressCard({ goalId, showDetails = true }: GoalProgressCar
         <div className="space-y-3">
           <div className="flex justify-between text-sm">
             <span className="font-medium">Progress</span>
-            <span className={progress.progress_percentage >= 100 ? 'text-green-600 font-semibold' : ''}>
-              {formatCurrency(progress.goal.current_amount)} / {formatCurrency(progress.goal.target_amount)}
+            <span className={progressPercentage >= 100 ? 'text-green-600 font-semibold' : ''}>
+              {formatCurrency(currentAmount)} / {formatCurrency(targetAmount)}
             </span>
           </div>
-          <Progress 
-            value={Math.min(progress.progress_percentage, 100)} 
-            className={progress.progress_percentage >= 100 ? '[&>div]:bg-green-600' : ''}
+          <Progress
+            value={Math.min(progressPercentage, 100)}
+            className={progressPercentage >= 100 ? '[&>div]:bg-green-600' : ''}
           />
           <div className="flex justify-between items-center text-xs text-muted-foreground">
-            <span>{progress.progress_percentage.toFixed(1)}% complete</span>
-            <span className={progress.remaining_amount > 0 ? 'text-muted-foreground' : 'text-green-600'}>
-              {formatCurrency(Math.abs(progress.remaining_amount))} {progress.remaining_amount > 0 ? 'remaining' : 'over target'}
+            <span>{progressPercentage.toFixed(1)}% complete</span>
+            <span className={remainingAmount > 0 ? 'text-muted-foreground' : 'text-green-600'}>
+              {formatCurrency(Math.abs(remainingAmount))} {remainingAmount > 0 ? 'remaining' : 'over target'}
             </span>
           </div>
         </div>
@@ -145,18 +152,18 @@ export function GoalProgressCard({ goalId, showDetails = true }: GoalProgressCar
                   <Calendar className="h-3 w-3" />
                   <span>Days Remaining</span>
                 </div>
-                <div className={`text-lg font-semibold ${progress.days_remaining < 30 && progress.progress_percentage < 100 ? 'text-orange-600' : ''}`}>
+                <div className={`text-lg font-semibold ${progress.days_remaining < 30 && progressPercentage < 100 ? 'text-orange-600' : ''}`}>
                   {progress.days_remaining > 0 ? progress.days_remaining : 0} days
                 </div>
               </div>
-              
+
               <div className="space-y-1">
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                   <TrendingUp className="h-3 w-3" />
                   <span>Required Monthly</span>
                 </div>
                 <div className="text-lg font-semibold">
-                  {formatCurrency(progress.required_monthly_contribution)}
+                  {formatCurrency(requiredMonthly)}
                 </div>
               </div>
 
@@ -170,14 +177,14 @@ export function GoalProgressCard({ goalId, showDetails = true }: GoalProgressCar
                 </div>
               </div>
 
-              {progress.goal.monthly_contribution && (
+              {progress.monthly_contribution && (
                 <div className="space-y-1">
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
                     <Target className="h-3 w-3" />
                     <span>Monthly Target</span>
                   </div>
                   <div className="text-lg font-semibold">
-                    {formatCurrency(progress.goal.monthly_contribution)}
+                    {formatCurrency(Number(progress.monthly_contribution))}
                   </div>
                 </div>
               )}
@@ -188,41 +195,15 @@ export function GoalProgressCard({ goalId, showDetails = true }: GoalProgressCar
               <div className="flex justify-between text-sm">
                 <div>
                   <p className="text-xs text-muted-foreground">Start Date</p>
-                  <p className="font-medium">{formatDate(progress.goal.start_date)}</p>
+                  <p className="font-medium">{formatDate(progress.start_date)}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-xs text-muted-foreground">Target Date</p>
-                  <p className="font-medium">{formatDate(progress.goal.target_date)}</p>
+                  <p className="font-medium">{formatDate(progress.target_date)}</p>
                 </div>
               </div>
-              
-              {progress.projected_completion_date && progress.goal.status === 'active' && (
-                <div className="flex items-center gap-2 text-xs">
-                  {progress.on_track ? (
-                    <>
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span className="text-green-600">
-                        Projected completion: {formatDate(progress.projected_completion_date)}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <AlertTriangle className="h-4 w-4 text-orange-600" />
-                      <span className="text-orange-600">
-                        At current rate, completion by: {formatDate(progress.projected_completion_date)}
-                      </span>
-                    </>
-                  )}
-                </div>
-              )}
             </div>
 
-            {/* Description */}
-            {progress.goal.description && (
-              <div className="pt-4 border-t">
-                <p className="text-sm text-muted-foreground">{progress.goal.description}</p>
-              </div>
-            )}
           </>
         )}
       </CardContent>

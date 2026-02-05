@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import type { RecurringBill } from '@/types'
 import { budgetsApi } from '@/lib/api'
 import { formatCurrency } from '@/lib/currency'
@@ -22,10 +23,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { AlertCircle, Calendar, DollarSign, Loader2 } from 'lucide-react'
+import { AlertCircle, Calendar, DollarSign, Loader2, Plus } from 'lucide-react'
 import { toast } from 'sonner'
+import {Button} from '@/components/ui/button'
 
 export function BillsTab() {
+  const router = useRouter()
   const [allBills, setAllBills] = useState<RecurringBill[]>([])
   const [upcomingBills, setUpcomingBills] = useState<RecurringBill[]>([])
   const [overdueBills, setOverdueBills] = useState<RecurringBill[]>([])
@@ -73,6 +76,10 @@ export function BillsTab() {
     }
   }
 
+  const handleEdit = (bill: RecurringBill) => {
+    router.push(`/dashboard/budgets/bills/${bill.id}/edit`)
+  }
+
   const handleDelete = (bill: RecurringBill) => {
     setBillToDelete(bill)
   }
@@ -107,6 +114,19 @@ export function BillsTab() {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold">Recurring Bills</h2>
+          <p className="text-sm text-muted-foreground">
+            Track recurring payments and due dates
+          </p>
+        </div>
+        <Button onClick={() => router.push('/dashboard/budgets/bills/new')}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Bill
+        </Button>
+      </div>
+
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
@@ -163,7 +183,12 @@ export function BillsTab() {
         </TabsList>
 
         <TabsContent value="all" className="space-y-4">
-          <BillsList bills={allBills} onMarkPaid={handleMarkPaid} onDelete={handleDelete} />
+          <BillsList
+            bills={allBills}
+            onMarkPaid={handleMarkPaid}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
         </TabsContent>
 
         <TabsContent value="upcoming" className="space-y-4">
@@ -180,7 +205,12 @@ export function BillsTab() {
                   </div>
                 </CardContent>
               </Card>
-              <BillsList bills={upcomingBills} onMarkPaid={handleMarkPaid} onDelete={handleDelete} />
+              <BillsList
+                bills={upcomingBills}
+                onMarkPaid={handleMarkPaid}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
             </>
           ) : (
             <Card>
@@ -209,7 +239,12 @@ export function BillsTab() {
                   </div>
                 </CardContent>
               </Card>
-              <BillsList bills={overdueBills} onMarkPaid={handleMarkPaid} onDelete={handleDelete} />
+              <BillsList
+                bills={overdueBills}
+                onMarkPaid={handleMarkPaid}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
             </>
           ) : (
             <Card>

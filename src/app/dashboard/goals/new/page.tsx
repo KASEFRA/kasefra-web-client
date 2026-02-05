@@ -5,14 +5,14 @@
  * Form for creating a new financial goal
  */
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
 import { goalsApi } from '@/lib/api/goals'
 import { accountsApi } from '@/lib/api/accounts'
-import { GoalType, GoalStatus } from '@/types'
+import { GoalType } from '@/types'
 import type { Account } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -28,20 +28,17 @@ import {
 } from '@/components/ui/select'
 import { ArrowLeft, Loader2, Save, Target } from 'lucide-react'
 import { toast } from 'sonner'
-import { useEffect } from 'react'
 
 const goalSchema = z.object({
   goal_name: z.string().min(1, 'Goal name is required').max(100, 'Goal name is too long'),
   goal_type: z.nativeEnum(GoalType),
   target_amount: z.number().min(0.01, 'Target amount must be greater than 0'),
-  current_amount: z.number().min(0, 'Current amount cannot be negative').optional(),
   start_date: z.string().min(1, 'Start date is required'),
   target_date: z.string().min(1, 'Target date is required'),
   monthly_contribution: z.number().min(0, 'Monthly contribution cannot be negative').optional(),
   account_id: z.string().optional(),
-  priority: z.number().min(0).max(10).optional(),
+  priority: z.number().min(1).max(3).optional(),
   notes: z.string().max(500, 'Notes are too long').optional(),
-  status: z.nativeEnum(GoalStatus).optional(),
 }).refine((data) => {
   const start = new Date(data.start_date)
   const target = new Date(data.target_date)
@@ -69,9 +66,7 @@ export default function NewGoalPage() {
     resolver: zodResolver(goalSchema),
     defaultValues: {
       goal_type: GoalType.SAVINGS,
-      current_amount: 0,
-      priority: 0,
-      status: GoalStatus.ACTIVE,
+      priority: 1,
       start_date: new Date().toISOString().split('T')[0],
     },
   })
@@ -100,9 +95,8 @@ export default function NewGoalPage() {
       // Prepare the data for API
       const goalData = {
         ...data,
-        current_amount: data.current_amount || 0,
-        priority: data.priority || 0,
-        status: data.status || GoalStatus.ACTIVE,
+        priority: data.priority || 1,
+        account_id: data.account_id || null,
       }
 
       await goalsApi.create(goalData)
@@ -218,25 +212,6 @@ export default function NewGoalPage() {
                   )}
                 </div>
 
-                {/* Current Amount */}
-                <div className="space-y-2">
-                  <Label htmlFor="current_amount">Current Amount (AED)</Label>
-                  <Input
-                    id="current_amount"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="0.00"
-                    {...register('current_amount', { valueAsNumber: true })}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Enter the amount you&apos;ve already saved (optional)
-                  </p>
-                  {errors.current_amount && (
-                    <p className="text-sm text-red-600">{errors.current_amount.message}</p>
-                  )}
-                </div>
-
                 {/* Monthly Contribution */}
                 <div className="space-y-2">
                   <Label htmlFor="monthly_contribution">Monthly Contribution (AED)</Label>
@@ -308,15 +283,18 @@ export default function NewGoalPage() {
                 <div className="space-y-2">
                   <Label htmlFor="account_id">Link to Account (Optional)</Label>
                   <Select
-                    onValueChange={(value) => setValue('account_id', value)}
+                    value={watch('account_id') || 'none'}
+                    onValueChange={(value) =>
+                      setValue('account_id', value === 'none' ? undefined : value)
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select an account" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No account</SelectItem>
+                      <SelectItem value="none">No account</SelectItem>
                       {loadingAccounts ? (
-                        <SelectItem value="" disabled>Loading accounts...</SelectItem>
+                        <SelectItem value="loading" disabled>Loading accounts...</SelectItem>
                       ) : (
                         accounts.map((account) => (
                           <SelectItem key={account.id} value={account.id}>
@@ -333,40 +311,21 @@ export default function NewGoalPage() {
 
                 {/* Priority */}
                 <div className="space-y-2">
-                  <Label htmlFor="priority">Priority (0-10)</Label>
+                  <Label htmlFor="priority">Priority (1-3)</Label>
                   <Input
                     id="priority"
                     type="number"
-                    min="0"
-                    max="10"
-                    placeholder="0"
+                    min="1"
+                    max="3"
+                    placeholder="1"
                     {...register('priority', { valueAsNumber: true })}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Higher number = higher priority (0 = lowest, 10 = highest)
+                    1 = High, 2 = Medium, 3 = Low
                   </p>
                   {errors.priority && (
                     <p className="text-sm text-red-600">{errors.priority.message}</p>
                   )}
-                </div>
-
-                {/* Status */}
-                <div className="space-y-2">
-                  <Label htmlFor="status">Status</Label>
-                  <Select
-                    defaultValue={GoalStatus.ACTIVE}
-                    onValueChange={(value) => setValue('status', value as GoalStatus)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={GoalStatus.ACTIVE}>Active</SelectItem>
-                      <SelectItem value={GoalStatus.PAUSED}>Paused</SelectItem>
-                      <SelectItem value={GoalStatus.COMPLETED}>Completed</SelectItem>
-                      <SelectItem value={GoalStatus.CANCELLED}>Cancelled</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
 
                 {/* Notes */}

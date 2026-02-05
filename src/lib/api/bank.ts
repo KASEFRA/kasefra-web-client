@@ -120,8 +120,13 @@ export const bankApi = {
    * Aggregates data from all transactions based on filters
    */
   async getOverallSummary(filters?: {
+    account_id?: string
+    category_id?: string
+    transaction_type?: string
+    status?: string
     start_date?: string
     end_date?: string
+    search_term?: string
   }): Promise<{
     total_income: number
     total_expenses: number
@@ -129,32 +134,9 @@ export const bankApi = {
     income_count: number
     expense_count: number
   }> {
-    const response = await this.getAll({
-      ...filters,
-      limit: 10000, // High limit to get all transactions in range
+    const response = await apiClient.get('/accounts/transactions/summary', {
+      params: filters,
     })
-
-    const summary = response.transactions.reduce(
-      (acc, txn) => {
-        if (txn.transaction_type === 'credit') {
-          acc.total_income += txn.amount
-          acc.income_count++
-        } else {
-          acc.total_expenses += txn.amount
-          acc.expense_count++
-        }
-        return acc
-      },
-      {
-        total_income: 0,
-        total_expenses: 0,
-        net_income: 0,
-        income_count: 0,
-        expense_count: 0,
-      }
-    )
-
-    summary.net_income = summary.total_income - summary.total_expenses
-    return summary
+    return response.data
   },
 }

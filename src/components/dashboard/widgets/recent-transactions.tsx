@@ -71,11 +71,11 @@ export function RecentTransactions() {
 
   const getTransactionIcon = (type: string) => {
     return type === 'credit' ? (
-      <div className="rounded-full bg-green-100 p-2 dark:bg-green-900/20">
+      <div className="rounded-full bg-green-100 p-1.5 dark:bg-green-900/20">
         <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
       </div>
     ) : (
-      <div className="rounded-full bg-red-100 p-2 dark:bg-red-900/20">
+      <div className="rounded-full bg-red-100 p-1.5 dark:bg-red-900/20">
         <TrendingDown className="h-4 w-4 text-red-600 dark:text-red-400" />
       </div>
     )
@@ -141,7 +141,7 @@ export function RecentTransactions() {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
+        <div className="space-y-3">
           {transactions.map((transaction) => {
             const account = accounts.get(transaction.account_id)
             const category = transaction.category_id
@@ -151,7 +151,7 @@ export function RecentTransactions() {
             return (
               <div
                 key={transaction.id}
-                className="flex items-center justify-between space-x-4 rounded-lg border p-3 transition-colors hover:bg-muted/50 cursor-pointer"
+                className="flex items-center justify-between space-x-4 rounded-md border p-2.5 transition-colors hover:bg-muted/50 cursor-pointer"
                 onClick={() => router.push('/dashboard/transactions')}
               >
                 {/* Icon and Info */}

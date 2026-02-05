@@ -677,7 +677,6 @@ export interface GoalCreate {
   target_date: string
   account_id?: string | null
   description?: string | null
-  current_amount?: number
   currency?: string
   monthly_contribution?: number | null
   priority?: number
@@ -688,8 +687,8 @@ export interface GoalUpdate {
   goal_name?: string
   description?: string | null
   target_amount?: number
-  current_amount?: number
   target_date?: string
+  account_id?: string | null
   status?: GoalStatus
   is_active?: boolean
   monthly_contribution?: number | null
@@ -698,14 +697,23 @@ export interface GoalUpdate {
 }
 
 export interface GoalProgress {
-  goal: Goal
-  progress_percentage: number
+  goal_id: string
+  goal_name: string
+  goal_type: GoalType
+  target_amount: number
+  current_amount: number
   remaining_amount: number
+  progress_percentage: number
+  start_date: string
+  target_date: string
   days_remaining: number
   days_elapsed: number
+  total_days: number
+  monthly_contribution: number | null
   required_monthly_contribution: number
   on_track: boolean
-  projected_completion_date: string | null
+  status: GoalStatus
+  time_percentage: number
 }
 
 export interface GoalSummary {
@@ -713,14 +721,39 @@ export interface GoalSummary {
   active_goals: number
   completed_goals: number
   total_target_amount: number
-  total_current_amount: number
+  total_saved_amount: number
+  total_remaining: number
   overall_progress_percentage: number
   goals_on_track: number
-  goals_behind_schedule: number
+  goals_behind: number
 }
 
 export interface GoalListResponse {
   goals: Goal[]
+  total_count: number
+}
+
+export interface GoalContribution {
+  id: string
+  goal_id: string
+  user_id: string
+  account_id: string | null
+  amount: number
+  contribution_date: string
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface GoalContributionCreate {
+  amount: number
+  contribution_date?: string
+  account_id?: string | null
+  notes?: string | null
+}
+
+export interface GoalContributionListResponse {
+  contributions: GoalContribution[]
   total_count: number
 }
 
@@ -741,6 +774,15 @@ export interface NetWorthSnapshot {
   updated_at: string
 }
 
+export interface NetWorthAccountBreakdown {
+  id: string
+  account_name: string
+  account_type: string
+  balance: number
+  currency: string
+  category: string
+}
+
 export interface NetWorthCurrent {
   total_assets: number
   total_liabilities: number
@@ -751,6 +793,10 @@ export interface NetWorthCurrent {
 
   // Breakdown by account type
   breakdown_by_type: Record<string, number>
+
+  // Account-level breakdown
+  assets_breakdown: NetWorthAccountBreakdown[]
+  liabilities_breakdown: NetWorthAccountBreakdown[]
 
   // Account counts
   total_accounts: number

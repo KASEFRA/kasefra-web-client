@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Image from "next/image"
 import {
   LayoutDashboard,
   Wallet,
@@ -35,6 +36,13 @@ import { NavMain } from "@/components/dashboard/nav-main"
 import { NavSecondary } from "@/components/dashboard/nav-secondary"
 import { NavUser } from "@/components/dashboard/nav-user"
 import { useAuth } from "@/components/providers/auth-provider"
+
+const resolveAvatarUrl = (avatarUrl?: string | null) => {
+  if (!avatarUrl) return ""
+  if (avatarUrl.startsWith("http")) return avatarUrl
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+  return `${baseUrl}${avatarUrl}`
+}
 
 const navMainItems = [
   {
@@ -140,7 +148,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const userData = {
     name: user?.full_name || "User",
     email: user?.email || "",
-    avatar: "/avatars/default.jpg",
+    avatar: resolveAvatarUrl(user?.avatar_url),
   }
 
   return (
@@ -148,15 +156,29 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader>
         <SidebarMenu className="group-data-[collapsible=icon]:items-center">
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild tooltip="Kasefra">
+            <SidebarMenuButton
+              size="lg"
+              asChild
+              tooltip="Kasefra"
+              className=" group-data-[collapsible=icon]:!size-12 group-data-[collapsible=icon]:!p-1"
+            >
               <a href="/dashboard">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground group-data-[collapsible=icon]:size-6">
-                  <span className="font-bold text-lg group-data-[collapsible=icon]:text-sm">K</span>
-                </div>
-                <span className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">Kasefra</span>
-                  <span className="truncate text-xs text-muted-foreground">Personal Finance</span>
-                </span>
+                <Image
+                  src="/logo.png"
+                  alt="Kasefra logo"
+                  width={48}
+                  height={48}
+                  className="hidden h-12 w-12 object-contain group-data-[collapsible=icon]:block"
+                  priority
+                />
+                <Image
+                  src="/logo_long.png"
+                  alt="Kasefra"
+                  width={220}
+                  height={56}
+                  className="block h-14 w-auto max-w-[220px] object-contain group-data-[collapsible=icon]:hidden"
+                  priority
+                />
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>

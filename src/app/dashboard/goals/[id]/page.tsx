@@ -8,7 +8,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { goalsApi } from '@/lib/api/goals'
-import type { Goal, GoalProgress } from '@/types'
+import type { Goal } from '@/types'
 import { formatCurrency } from '@/lib/currency'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { GoalProgressCard } from '@/components/goals/goal-progress-card'
+import { GoalContributions } from '@/components/goals/goal-contributions'
 import { 
   ArrowLeft, 
   Edit, 
@@ -50,6 +51,7 @@ export default function GoalDetailPage() {
   const [deleting, setDeleting] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [goal, setGoal] = useState<Goal | null>(null)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {
     loadGoal()
@@ -84,6 +86,11 @@ export default function GoalDetailPage() {
       setDeleting(false)
       setShowDeleteDialog(false)
     }
+  }
+
+  const handleContributionChange = () => {
+    setRefreshKey((prev) => prev + 1)
+    loadGoal()
   }
 
   const formatDate = (dateString: string) => {
@@ -185,7 +192,7 @@ export default function GoalDetailPage() {
       </div>
 
       {/* Progress Card */}
-      <GoalProgressCard goalId={goalId} />
+      <GoalProgressCard goalId={goalId} refreshKey={refreshKey} />
 
       {/* Goal Details */}
       <div className="grid gap-6 md:grid-cols-2">
@@ -217,7 +224,7 @@ export default function GoalDetailPage() {
                 <span>Target Amount</span>
               </div>
               <span className="text-sm font-semibold">
-                {formatCurrency(goal.target_amount)}
+                {formatCurrency(Number(goal.target_amount))}
               </span>
             </div>
 
@@ -227,7 +234,7 @@ export default function GoalDetailPage() {
                 <span>Current Amount</span>
               </div>
               <span className="text-sm font-semibold">
-                {formatCurrency(goal.current_amount)}
+                {formatCurrency(Number(goal.current_amount))}
               </span>
             </div>
 
@@ -238,7 +245,7 @@ export default function GoalDetailPage() {
                   <span>Monthly Contribution</span>
                 </div>
                 <span className="text-sm font-semibold">
-                  {formatCurrency(goal.monthly_contribution)}
+                  {formatCurrency(Number(goal.monthly_contribution))}
                 </span>
               </div>
             )}
@@ -298,6 +305,9 @@ export default function GoalDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Contributions */}
+      <GoalContributions goalId={goalId} onContributionChange={handleContributionChange} />
 
       {/* Notes */}
       {goal.notes && (

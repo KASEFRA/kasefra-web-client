@@ -31,23 +31,13 @@ import { toast } from 'sonner'
 
 const goalSchema = z.object({
   goal_name: z.string().min(1, 'Goal name is required').max(100, 'Goal name is too long'),
-  goal_type: z.nativeEnum(GoalType),
   target_amount: z.number().min(0.01, 'Target amount must be greater than 0'),
-  current_amount: z.number().min(0, 'Current amount cannot be negative').optional(),
-  start_date: z.string().min(1, 'Start date is required'),
   target_date: z.string().min(1, 'Target date is required'),
   monthly_contribution: z.number().min(0, 'Monthly contribution cannot be negative').optional(),
   account_id: z.string().optional(),
-  priority: z.number().min(0).max(10).optional(),
+  priority: z.number().min(1).max(3).optional(),
   notes: z.string().max(500, 'Notes are too long').optional(),
   status: z.nativeEnum(GoalStatus).optional(),
-}).refine((data) => {
-  const start = new Date(data.start_date)
-  const target = new Date(data.target_date)
-  return target > start
-}, {
-  message: 'Target date must be after start date',
-  path: ['target_date'],
 })
 
 type GoalFormData = z.infer<typeof goalSchema>
@@ -74,8 +64,6 @@ export default function EditGoalPage() {
     resolver: zodResolver(goalSchema),
   })
 
-  const goalType = watch('goal_type')
-
   useEffect(() => {
     loadGoal()
     loadAccounts()
@@ -90,10 +78,7 @@ export default function EditGoalPage() {
       // Populate form with existing data
       reset({
         goal_name: goalRes.goal_name,
-        goal_type: goalRes.goal_type,
         target_amount: goalRes.target_amount,
-        current_amount: goalRes.current_amount,
-        start_date: goalRes.start_date,
         target_date: goalRes.target_date,
         monthly_contribution: goalRes.monthly_contribution || undefined,
         account_id: goalRes.account_id || undefined,
@@ -129,18 +114,14 @@ export default function EditGoalPage() {
       const goalData: any = {
         goal_name: data.goal_name,
         target_amount: data.target_amount,
-        current_amount: data.current_amount || 0,
-        start_date: data.start_date,
         target_date: data.target_date,
         monthly_contribution: data.monthly_contribution || null,
-        priority: data.priority || 0,
+        priority: data.priority || 1,
         notes: data.notes || null,
         status: data.status as GoalStatus,
       }
 
-      if (data.account_id) {
-        goalData.account_id = data.account_id
-      }
+      goalData.account_id = data.account_id || null
 
       await goalsApi.update(goalId, goalData)
       
@@ -166,7 +147,7 @@ export default function EditGoalPage() {
     { value: GoalType.OTHER, label: 'Other', description: 'Other financial goal' },
   ]
 
-  const selectedGoalType = goalTypes.find(t => t.value === goalType)
+  const selectedGoalType = goal ? goalTypes.find(t => t.value === goal.goal_type) : undefined
 
   if (loading) {
     return (
@@ -225,32 +206,6 @@ export default function EditGoalPage() {
                   )}
                 </div>
 
-                {/* Goal Type */}
-                <div className="space-y-2">
-                  <Label htmlFor="goal_type">Goal Type *</Label>
-                  <Select
-                    value={goalType}
-                    onValueChange={(value) => setValue('goal_type', value as GoalType)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select goal type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {goalTypes.map((type) => (
-                        <SelectItem key={type.value} value={type.value}>
-                          <div>
-                            <div className="font-medium">{type.label}</div>
-                            <div className="text-xs text-muted-foreground">{type.description}</div>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.goal_type && (
-                    <p className="text-sm text-red-600">{errors.goal_type.message}</p>
-                  )}
-                </div>
-
                 {/* Target Amount */}
                 <div className="space-y-2">
                   <Label htmlFor="target_amount">Target Amount (AED) *</Label>
@@ -264,25 +219,6 @@ export default function EditGoalPage() {
                   />
                   {errors.target_amount && (
                     <p className="text-sm text-red-600">{errors.target_amount.message}</p>
-                  )}
-                </div>
-
-                {/* Current Amount */}
-                <div className="space-y-2">
-                  <Label htmlFor="current_amount">Current Amount (AED)</Label>
-                  <Input
-                    id="current_amount"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="0.00"
-                    {...register('current_amount', { valueAsNumber: true })}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Update the current saved amount
-                  </p>
-                  {errors.current_amount && (
-                    <p className="text-sm text-red-600">{errors.current_amount.message}</p>
                   )}
                 </div>
 
@@ -316,17 +252,14 @@ export default function EditGoalPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Start Date */}
                 <div className="space-y-2">
-                  <Label htmlFor="start_date">Start Date *</Label>
-                  <Input
-                    id="start_date"
-                    type="date"
-                    {...register('start_date')}
-                  />
-                  {errors.start_date && (
-                    <p className="text-sm text-red-600">{errors.start_date.message}</p>
-                  )}
+                  <Label>Start Date</Label>
+                  <div className="rounded-md border px-3 py-2 text-sm text-muted-foreground">
+                    {goal.start_date}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Start date is fixed once the goal is created.
+                  </p>
                 </div>
 
                 {/* Target Date */}
@@ -357,16 +290,18 @@ export default function EditGoalPage() {
                 <div className="space-y-2">
                   <Label htmlFor="account_id">Link to Account (Optional)</Label>
                   <Select
-                    value={watch('account_id') || ''}
-                    onValueChange={(value) => setValue('account_id', value || undefined)}
+                    value={watch('account_id') || 'none'}
+                    onValueChange={(value) =>
+                      setValue('account_id', value === 'none' ? undefined : value)
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select an account" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No account</SelectItem>
+                      <SelectItem value="none">No account</SelectItem>
                       {loadingAccounts ? (
-                        <SelectItem value="" disabled>Loading accounts...</SelectItem>
+                        <SelectItem value="loading" disabled>Loading accounts...</SelectItem>
                       ) : (
                         accounts.map((account) => (
                           <SelectItem key={account.id} value={account.id}>
@@ -383,17 +318,17 @@ export default function EditGoalPage() {
 
                 {/* Priority */}
                 <div className="space-y-2">
-                  <Label htmlFor="priority">Priority (0-10)</Label>
+                  <Label htmlFor="priority">Priority (1-3)</Label>
                   <Input
                     id="priority"
                     type="number"
-                    min="0"
-                    max="10"
-                    placeholder="0"
+                    min="1"
+                    max="3"
+                    placeholder="1"
                     {...register('priority', { valueAsNumber: true })}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Higher number = higher priority (0 = lowest, 10 = highest)
+                    1 = High, 2 = Medium, 3 = Low
                   </p>
                   {errors.priority && (
                     <p className="text-sm text-red-600">{errors.priority.message}</p>

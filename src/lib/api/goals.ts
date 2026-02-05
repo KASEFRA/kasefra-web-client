@@ -12,6 +12,9 @@ import type {
   GoalSummary,
   GoalType,
   GoalStatus,
+  GoalContributionCreate,
+  GoalContributionListResponse,
+  GoalContribution,
 } from '@/types'
 
 export const goalsApi = {
@@ -92,6 +95,40 @@ export const goalsApi = {
    */
   async getSummary(): Promise<GoalSummary> {
     const response = await apiClient.get<GoalSummary>('/goals/summary')
+    return response.data
+  },
+
+  /**
+   * Add a manual contribution to a goal
+   */
+  async addContribution(
+    goalId: string,
+    data: GoalContributionCreate
+  ): Promise<GoalContribution> {
+    const response = await apiClient.post<GoalContribution>(
+      `/goals/${goalId}/contributions`,
+      data
+    )
+    return response.data
+  },
+
+  /**
+   * List contributions for a goal
+   */
+  async listContributions(goalId: string): Promise<GoalContributionListResponse> {
+    const response = await apiClient.get<GoalContributionListResponse>(
+      `/goals/${goalId}/contributions`
+    )
+    return response.data
+  },
+
+  /**
+   * Delete a contribution from a goal
+   */
+  async deleteContribution(goalId: string, contributionId: string): Promise<{ message: string }> {
+    const response = await apiClient.delete<{ message: string }>(
+      `/goals/${goalId}/contributions/${contributionId}`
+    )
     return response.data
   },
 }

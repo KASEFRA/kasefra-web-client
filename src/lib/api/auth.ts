@@ -69,4 +69,18 @@ export const authAPI = {
     )
     return response.data
   },
+
+  /**
+   * Upload user avatar
+   */
+  uploadAvatar: async (file: File): Promise<UserResponse> => {
+    const formData = new FormData()
+    formData.append('file', file)
+    const response = await apiClient.post<UserResponse>('/auth/me/avatar', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+    return response.data
+  },
 }

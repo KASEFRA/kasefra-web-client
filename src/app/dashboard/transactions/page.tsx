@@ -46,6 +46,172 @@ import { DateRangePicker } from '@/components/ui/date-range-picker'
 import { TransactionSummary } from '@/components/dashboard/transaction-summary'
 import { Pagination } from '@/components/ui/pagination'
 
+const parseAmountInput = (value: string) => {
+  const normalized = value.replace(/,/g, '').trim()
+  if (!normalized) return Number.NaN
+  const parsed = Number.parseFloat(normalized)
+  return Number.isFinite(parsed) ? parsed : Number.NaN
+}
+
+const formatAmountInput = (amount: number) => (
+  Number.isFinite(amount) ? amount.toString() : ''
+)
+
+type TransactionFormProps = {
+  accounts: Account[]
+  filteredCategories: Category[]
+  formData: BankTransactionCreate
+  setFormData: React.Dispatch<React.SetStateAction<BankTransactionCreate>>
+  submitting: boolean
+  submitLabel: string
+  onSubmit: (e: React.FormEvent) => void
+  amountInput: string
+  onAmountChange: (value: string) => void
+  disableAccountSelect: boolean
+}
+
+const TransactionForm = ({
+  accounts,
+  filteredCategories,
+  formData,
+  setFormData,
+  submitting,
+  submitLabel,
+  onSubmit,
+  amountInput,
+  onAmountChange,
+  disableAccountSelect,
+}: TransactionFormProps) => (
+  <form onSubmit={onSubmit} className="space-y-4">
+    <div className="grid gap-4 md:grid-cols-2">
+      {/* Account */}
+      <div className="space-y-2">
+        <Label htmlFor="account">Account *</Label>
+        <Select
+          value={formData.account_id}
+          onValueChange={(value) => setFormData((prev) => ({ ...prev, account_id: value }))}
+          disabled={disableAccountSelect}
+        >
+          <SelectTrigger id="account">
+            <SelectValue placeholder="Select account" />
+          </SelectTrigger>
+          <SelectContent>
+            {accounts.map((account) => (
+              <SelectItem key={account.id} value={account.id}>
+                {account.account_name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Transaction Type */}
+      <div className="space-y-2">
+        <Label htmlFor="type">Type *</Label>
+        <Select
+          value={formData.transaction_type}
+          onValueChange={(value) => setFormData((prev) => ({
+            ...prev,
+            transaction_type: value as TransactionType,
+            category_id: null,
+          }))}
+        >
+          <SelectTrigger id="type">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={TransactionType.DEBIT}>Debit (Expense)</SelectItem>
+            <SelectItem value={TransactionType.CREDIT}>Credit (Income)</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+
+    <div className="grid gap-4 md:grid-cols-2">
+      {/* Amount */}
+      <div className="space-y-2">
+        <Label htmlFor="amount">Amount (AED) *</Label>
+        <Input
+          id="amount"
+          type="number"
+          step="0.01"
+          min="0.01"
+          required
+          placeholder="0.00"
+          value={amountInput}
+          onChange={(e) => onAmountChange(e.target.value)}
+        />
+      </div>
+
+      {/* Category */}
+      <div className="space-y-2">
+        <Label htmlFor="category">Category</Label>
+        <Select
+          value={formData.category_id || 'none'}
+          onValueChange={(value) => setFormData((prev) => ({
+            ...prev,
+            category_id: value === 'none' ? null : value,
+          }))}
+        >
+          <SelectTrigger id="category">
+            <SelectValue placeholder="Select category" />
+          </SelectTrigger>
+          <SelectContent className="max-h-72 overflow-y-auto">
+            <SelectItem value="none">No Category</SelectItem>
+            {filteredCategories.map((cat) => (
+              <SelectItem key={cat.id} value={cat.id}>
+                {cat.icon} {cat.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+
+    {/* Description */}
+    <div className="space-y-2">
+      <Label htmlFor="description">Description *</Label>
+      <Input
+        id="description"
+        required
+        placeholder="e.g., Grocery shopping"
+        value={formData.description}
+        onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+      />
+    </div>
+
+    {/* Transaction Date */}
+    <div className="space-y-2">
+      <Label htmlFor="txDate">Transaction Date *</Label>
+      <Input
+        id="txDate"
+        type="date"
+        required
+        value={formData.transaction_date}
+        onChange={(e) => setFormData((prev) => ({ ...prev, transaction_date: e.target.value }))}
+      />
+    </div>
+
+    {/* Notes */}
+    <div className="space-y-2">
+      <Label htmlFor="notes">Notes</Label>
+      <Textarea
+        id="notes"
+        placeholder="Additional notes..."
+        rows={3}
+        value={formData.notes || ''}
+        onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
+      />
+    </div>
+
+    <DialogFooter>
+      <Button type="submit" disabled={submitting}>
+        {submitting ? 'Saving...' : submitLabel}
+      </Button>
+    </DialogFooter>
+  </form>
+)
+
 export default function TransactionsPage() {
   const [accounts, setAccounts] = useState<Account[]>([])
   const [categories, setCategories] = useState<Category[]>([])
@@ -90,6 +256,7 @@ export default function TransactionsPage() {
     transaction_date: new Date().toISOString().split('T')[0],
     notes: '',
   })
+  const [amountInput, setAmountInput] = useState('')
 
   useEffect(() => {
     loadInitialData()
@@ -150,6 +317,10 @@ export default function TransactionsPage() {
       setSummaryLoading(true)
       const filters: any = {}
       
+      if (selectedAccount !== 'all') filters.account_id = selectedAccount
+      if (selectedCategory !== 'all') filters.category_id = selectedCategory
+      if (selectedType !== 'all') filters.transaction_type = selectedType
+      if (searchQuery) filters.search_term = searchQuery
       if (dateRange?.from) filters.start_date = format(dateRange.from, 'yyyy-MM-dd')
       if (dateRange?.to) filters.end_date = format(dateRange.to, 'yyyy-MM-dd')
 
@@ -179,12 +350,22 @@ export default function TransactionsPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
+    const parsedAmount = parseAmountInput(amountInput)
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      alert('Please enter a valid amount greater than 0.')
+      return
+    }
     try {
       setSubmitting(true)
-      await bankApi.create(formData)
+      const payload: BankTransactionCreate = {
+        ...formData,
+        amount: parsedAmount,
+      }
+      await bankApi.create(payload)
       setCreateDialogOpen(false)
       resetForm()
       await loadTransactions()
+      await loadSummary()
     } catch (error: any) {
       console.error('Failed to create transaction:', error)
       alert(error.response?.data?.error?.details || 'Failed to create transaction')
@@ -196,12 +377,17 @@ export default function TransactionsPage() {
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!editingTransaction) return
+    const parsedAmount = parseAmountInput(amountInput)
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      alert('Please enter a valid amount greater than 0.')
+      return
+    }
 
     try {
       setSubmitting(true)
       const updateData: BankTransactionUpdate = {
         category_id: formData.category_id,
-        amount: formData.amount,
+        amount: parsedAmount,
         transaction_type: formData.transaction_type,
         description: formData.description,
         transaction_date: formData.transaction_date,
@@ -213,6 +399,7 @@ export default function TransactionsPage() {
       setEditingTransaction(null)
       resetForm()
       await loadTransactions()
+      await loadSummary()
     } catch (error: any) {
       console.error('Failed to update transaction:', error)
       alert(error.response?.data?.error?.details || 'Failed to update transaction')
@@ -227,6 +414,7 @@ export default function TransactionsPage() {
     try {
       await bankApi.delete(transactionId)
       await loadTransactions()
+      await loadSummary()
     } catch (error) {
       console.error('Failed to delete transaction:', error)
       alert('Failed to delete transaction')
@@ -249,6 +437,7 @@ export default function TransactionsPage() {
       transaction_date: transaction.transaction_date,
       notes: transaction.notes || '',
     })
+    setAmountInput(formatAmountInput(transaction.amount))
     setEditDialogOpen(true)
   }
 
@@ -262,6 +451,7 @@ export default function TransactionsPage() {
       transaction_date: new Date().toISOString().split('T')[0],
       notes: '',
     })
+    setAmountInput('')
   }
 
   const formatDate = (dateString: string) => {
@@ -281,129 +471,6 @@ export default function TransactionsPage() {
       return cat.category_type === CategoryType.EXPENSE
     }
   })
-
-  const TransactionForm = ({ onSubmit, submitLabel }: { onSubmit: (e: React.FormEvent) => void, submitLabel: string }) => (
-    <form onSubmit={onSubmit} className="space-y-4">
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Account */}
-        <div className="space-y-2">
-          <Label htmlFor="account">Account *</Label>
-          <Select
-            value={formData.account_id}
-            onValueChange={(value) => setFormData({ ...formData, account_id: value })}
-            disabled={!!editingTransaction}
-          >
-            <SelectTrigger id="account">
-              <SelectValue placeholder="Select account" />
-            </SelectTrigger>
-            <SelectContent>
-              {accounts.map((account) => (
-                <SelectItem key={account.id} value={account.id}>
-                  {account.account_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Transaction Type */}
-        <div className="space-y-2">
-          <Label htmlFor="type">Type *</Label>
-          <Select
-            value={formData.transaction_type}
-            onValueChange={(value) => setFormData({ ...formData, transaction_type: value as TransactionType, category_id: null })}
-          >
-            <SelectTrigger id="type">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={TransactionType.DEBIT}>Debit (Expense)</SelectItem>
-              <SelectItem value={TransactionType.CREDIT}>Credit (Income)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Amount */}
-        <div className="space-y-2">
-          <Label htmlFor="amount">Amount (AED) *</Label>
-          <Input
-            id="amount"
-            type="number"
-            step="0.01"
-            min="0.01"
-            required
-            value={formData.amount || ''}
-            onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
-          />
-        </div>
-
-        {/* Category */}
-        <div className="space-y-2">
-          <Label htmlFor="category">Category</Label>
-          <Select
-            value={formData.category_id || 'none'}
-            onValueChange={(value) => setFormData({ ...formData, category_id: value === 'none' ? null : value })}
-          >
-            <SelectTrigger id="category">
-              <SelectValue placeholder="Select category" />
-            </SelectTrigger>
-            <SelectContent className="max-h-72 overflow-y-auto">
-              <SelectItem value="none">No Category</SelectItem>
-              {filteredCategories.map((cat) => (
-                <SelectItem key={cat.id} value={cat.id}>
-                  {cat.icon} {cat.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* Description */}
-      <div className="space-y-2">
-        <Label htmlFor="description">Description *</Label>
-        <Input
-          id="description"
-          required
-          placeholder="e.g., Grocery shopping"
-          value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-        />
-      </div>
-
-      {/* Transaction Date */}
-      <div className="space-y-2">
-        <Label htmlFor="txDate">Transaction Date *</Label>
-        <Input
-          id="txDate"
-          type="date"
-          required
-          value={formData.transaction_date}
-          onChange={(e) => setFormData({ ...formData, transaction_date: e.target.value })}
-        />
-      </div>
-
-      {/* Notes */}
-      <div className="space-y-2">
-        <Label htmlFor="notes">Notes</Label>
-        <Textarea
-          id="notes"
-          placeholder="Additional notes..."
-          rows={3}
-          value={formData.notes || ''}
-          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-        />
-      </div>
-
-      <DialogFooter>
-        <Button type="submit" disabled={submitting}>
-          {submitting ? 'Saving...' : submitLabel}
-        </Button>
-      </DialogFooter>
-    </form>
-  )
 
   return (
     <div className="space-y-6">
@@ -434,12 +501,21 @@ export default function TransactionsPage() {
               placeholder="Search by description..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && loadTransactions()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  loadTransactions()
+                  loadSummary()
+                }
+              }}
               className="pl-9"
             />
             {searchQuery && (
               <button
-                onClick={() => setSearchQuery('')}
+                onClick={() => {
+                  setSearchQuery('')
+                  loadTransactions()
+                  loadSummary()
+                }}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 <X className="h-4 w-4" />
@@ -616,7 +692,18 @@ export default function TransactionsPage() {
               Create a new financial transaction
             </DialogDescription>
           </DialogHeader>
-          <TransactionForm onSubmit={handleCreate} submitLabel="Create Transaction" />
+          <TransactionForm
+            accounts={accounts}
+            filteredCategories={filteredCategories}
+            formData={formData}
+            setFormData={setFormData}
+            submitting={submitting}
+            submitLabel="Create Transaction"
+            onSubmit={handleCreate}
+            amountInput={amountInput}
+            onAmountChange={setAmountInput}
+            disableAccountSelect={false}
+          />
         </DialogContent>
       </Dialog>
 
@@ -629,7 +716,18 @@ export default function TransactionsPage() {
               Update transaction details
             </DialogDescription>
           </DialogHeader>
-          <TransactionForm onSubmit={handleUpdate} submitLabel="Update Transaction" />
+          <TransactionForm
+            accounts={accounts}
+            filteredCategories={filteredCategories}
+            formData={formData}
+            setFormData={setFormData}
+            submitting={submitting}
+            submitLabel="Update Transaction"
+            onSubmit={handleUpdate}
+            amountInput={amountInput}
+            onAmountChange={setAmountInput}
+            disableAccountSelect
+          />
         </DialogContent>
       </Dialog>
     </div>

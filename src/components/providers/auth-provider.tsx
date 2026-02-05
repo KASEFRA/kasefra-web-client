@@ -23,7 +23,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loadUser()
   }, [])
 
-  const loadUser = async () => {
+  const loadUser = async (force = false) => {
     // Check if we're in the browser
     if (typeof window === 'undefined') {
       setLoading(false)
@@ -35,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         // Try to get user from sessionStorage first
         const storedUser = getStoredUser()
-        if (storedUser) {
+        if (storedUser && !force) {
           setUser(storedUser)
           setLoading(false)
           return
@@ -84,8 +84,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.push('/login')
   }
 
-  const refreshUser = async () => {
-    await loadUser()
+  const refreshUser = async (force = true) => {
+    await loadUser(force)
   }
 
   return (
