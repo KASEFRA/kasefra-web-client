@@ -20,6 +20,7 @@ import {
   CreditCard,
   Banknote,
   CircleDollarSign,
+  Bot,
 } from "lucide-react"
 
 import {
@@ -126,6 +127,11 @@ const navMainItems = [
     title: "Reports",
     url: "/dashboard/reports",
     icon: FileText,
+  },
+  {
+    title: "AI Chat",
+    url: "/dashboard/chat",
+    icon: Bot,
   },
 ]
 

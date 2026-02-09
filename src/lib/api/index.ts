@@ -14,6 +14,7 @@ export { budgetsApi } from './budgets'
 export { goalsApi } from './goals'
 export { networthApi } from './networth'
 export { apiClient } from './client'
+export { aiChatApi } from './ai-chat'
 
 // Account type-specific detail APIs
 export { checkingApi } from './checking'

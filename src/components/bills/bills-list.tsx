@@ -156,7 +156,7 @@ export function BillsList({ bills, onMarkPaid, onEdit, onDelete }: BillsListProp
 
               {/* Actions */}
               <div className="flex flex-col gap-2 ml-4">
-                {onMarkPaid && bill.is_active && (
+                {onMarkPaid && bill.is_active && (bill.is_overdue || (bill.days_until_due !== null && bill.days_until_due <= 0)) && (
                   <Button
                     size="sm"
                     variant={bill.is_overdue ? 'default' : 'outline'}

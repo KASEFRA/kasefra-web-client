@@ -207,8 +207,8 @@ export const budgetsApi = {
   /**
    * Mark bill as paid
    */
-  async markBillPaid(billId: string, paidDate: string): Promise<RecurringBill> {
-    const response = await apiClient.post<RecurringBill>(`/bills/${billId}/mark-paid`, {
+  async markBillPaid(billId: string, paidDate: string): Promise<{ bill: RecurringBill; transaction_created: boolean }> {
+    const response = await apiClient.post<{ bill: RecurringBill; transaction_created: boolean }>(`/bills/${billId}/mark-paid`, {
       paid_date: paidDate,
     })
     return response.data
