@@ -8,6 +8,7 @@ import type {
   LoginRequest,
   SignupRequest,
   TokenResponse,
+  UserProfileResponse,
   UserResponse,
 } from '@/types/auth'
 
@@ -33,6 +34,14 @@ export const authAPI = {
    */
   getCurrentUser: async (): Promise<UserResponse> => {
     const response = await apiClient.get<UserResponse>('/auth/me')
+    return response.data
+  },
+
+  /**
+   * Get backend-computed profile summary for current user
+   */
+  getProfile: async (): Promise<UserProfileResponse> => {
+    const response = await apiClient.get<UserProfileResponse>('/auth/me/profile')
     return response.data
   },
 
@@ -81,6 +90,24 @@ export const authAPI = {
         'Content-Type': 'multipart/form-data',
       },
     })
+    return response.data
+  },
+
+  /**
+   * Set user's default payment account
+   */
+  setDefaultAccount: async (accountId: string): Promise<UserResponse> => {
+    const response = await apiClient.put<UserResponse>('/auth/me/default-account', {
+      account_id: accountId,
+    })
+    return response.data
+  },
+
+  /**
+   * Clear user's default payment account
+   */
+  clearDefaultAccount: async (): Promise<UserResponse> => {
+    const response = await apiClient.delete<UserResponse>('/auth/me/default-account')
     return response.data
   },
 }

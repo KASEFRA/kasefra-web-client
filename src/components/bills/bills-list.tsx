@@ -17,8 +17,10 @@ import {
   CheckCircle, 
   Edit, 
   Trash2,
-  Clock
+  Clock,
+  Wallet
 } from 'lucide-react'
+import { useAuth } from '@/components/providers/auth-provider'
 
 interface BillsListProps {
   bills: RecurringBill[]
@@ -28,6 +30,8 @@ interface BillsListProps {
 }
 
 export function BillsList({ bills, onMarkPaid, onEdit, onDelete }: BillsListProps) {
+  const { user } = useAuth()
+
   const getFrequencyName = (frequency: string) => {
     const frequencyMap: Record<string, string> = {
       weekly: 'Weekly',
@@ -95,6 +99,12 @@ export function BillsList({ bills, onMarkPaid, onEdit, onDelete }: BillsListProp
                     <Badge variant="outline" className="gap-1">
                       <CheckCircle className="h-3 w-3" />
                       Auto-pay
+                    </Badge>
+                  )}
+                  {!bill.account_id && user?.default_account_id && (
+                    <Badge variant="outline" className="gap-1 text-blue-600 border-blue-200 dark:text-blue-400 dark:border-blue-800">
+                      <Wallet className="h-3 w-3" />
+                      Default account
                     </Badge>
                   )}
                   {!bill.is_active && (

@@ -69,14 +69,14 @@ export default function UserNav() {
 
           {/* Menu Items */}
           <div className="p-2">
-            <Link
+            {/* <Link
               href="/dashboard/profile"
               onClick={() => setIsOpen(false)}
               className="flex w-full items-center space-x-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground"
             >
               <User className="h-4 w-4" />
               <span>Profile</span>
-            </Link>
+            </Link> */}
             <Link
               href="/dashboard/settings"
               onClick={() => setIsOpen(false)}

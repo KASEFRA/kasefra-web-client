@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/select'
 import { ArrowLeft, Loader2, Save, Target } from 'lucide-react'
 import { toast } from 'sonner'
+import { useAuth } from '@/components/providers/auth-provider'
 
 const goalSchema = z.object({
   goal_name: z.string().min(1, 'Goal name is required').max(100, 'Goal name is too long'),
@@ -52,6 +53,7 @@ export default function EditGoalPage() {
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loadingAccounts, setLoadingAccounts] = useState(true)
   const [goal, setGoal] = useState<Goal | null>(null)
+  const { user } = useAuth()
 
   const {
     register,
@@ -81,7 +83,7 @@ export default function EditGoalPage() {
         target_amount: goalRes.target_amount,
         target_date: goalRes.target_date,
         monthly_contribution: goalRes.monthly_contribution || undefined,
-        account_id: goalRes.account_id || undefined,
+        account_id: goalRes.account_id || (user?.default_account_id ?? undefined),
         priority: goalRes.priority,
         notes: goalRes.notes || undefined,
         status: goalRes.status,

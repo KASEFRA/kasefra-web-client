@@ -82,7 +82,7 @@ const DEFAULT_LAYOUT: DashboardWidgetLayout = {
 }
 
 const isWidgetId = (value: unknown): value is DashboardWidgetId => {
-  return Object.prototype.hasOwnProperty.call(dashboardWidgets, value)
+  return typeof value === 'string' && Object.prototype.hasOwnProperty.call(dashboardWidgets, value as PropertyKey)
 }
 
 const dedupeWidgets = (list: DashboardWidgetId[]) => {

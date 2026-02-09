@@ -27,8 +27,37 @@ export interface UserResponse {
   is_active: boolean
   is_superuser: boolean
   avatar_url?: string | null
+  default_account_id?: string | null
   created_at: string
   updated_at: string
+}
+
+export interface UserProfileStatsResponse {
+  connected_accounts: number
+  active_budgets: number
+  active_goals: number
+  recurring_bills: number
+  transactions_this_month: number
+  latest_transaction_date: string | null
+}
+
+export interface UserProfileResponse {
+  user: UserResponse
+  stats: UserProfileStatsResponse
+}
+
+export interface UserProfileStatsResponse {
+  connected_accounts: number
+  active_budgets: number
+  active_goals: number
+  recurring_bills: number
+  transactions_this_month: number
+  latest_transaction_date: string | null
+}
+
+export interface UserProfileResponse {
+  user: UserResponse
+  stats: UserProfileStatsResponse
 }
 
 export interface AuthContextType {

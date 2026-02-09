@@ -43,6 +43,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Loader2, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useAuth } from '@/components/providers/auth-provider'
 
 interface GoalContributionsProps {
   goalId: string
@@ -50,6 +51,7 @@ interface GoalContributionsProps {
 }
 
 export function GoalContributions({ goalId, onContributionChange }: GoalContributionsProps) {
+  const { user } = useAuth()
   const [accounts, setAccounts] = useState<Account[]>([])
   const [contributions, setContributions] = useState<GoalContribution[]>([])
   const [loading, setLoading] = useState(true)
@@ -77,6 +79,11 @@ export function GoalContributions({ goalId, onContributionChange }: GoalContribu
       ])
       setAccounts(accountsRes.accounts)
       setContributions(contributionsRes.contributions)
+
+      // Pre-fill from user's default payment account
+      if (user?.default_account_id && accountsRes.accounts.some((a: Account) => a.id === user.default_account_id)) {
+        setAccountId(user.default_account_id)
+      }
     } catch (error) {
       console.error('Failed to load contributions:', error)
       toast.error('Failed to load contributions. Please try again.')

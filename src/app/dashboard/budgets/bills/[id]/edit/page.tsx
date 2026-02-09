@@ -13,6 +13,7 @@ import * as z from 'zod'
 import { budgetsApi, categoriesApi, accountsApi } from '@/lib/api'
 import type { Account, Category, RecurringBill } from '@/types'
 import { BillFrequency, CategoryType } from '@/types'
+import { useAuth } from '@/components/providers/auth-provider'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -43,6 +44,7 @@ export default function EditBillPage() {
   const router = useRouter()
   const params = useParams()
   const billId = params.id as string
+  const { user } = useAuth()
 
   const [bill, setBill] = useState<RecurringBill | null>(null)
   const [categories, setCategories] = useState<Category[]>([])
@@ -51,7 +53,8 @@ export default function EditBillPage() {
   const [submitting, setSubmitting] = useState(false)
 
   const form = useForm<BillFormData>({
-    resolver: zodResolver(billSchema),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(billSchema) as any,
     defaultValues: {
       frequency: BillFrequency.MONTHLY,
       due_date: new Date().getDate(),
@@ -89,7 +92,7 @@ export default function EditBillPage() {
         frequency: billRes.frequency,
         due_date: billRes.due_date,
         category_id: billRes.category_id,
-        account_id: billRes.account_id || null,
+        account_id: billRes.account_id || (user?.default_account_id && accountsRes.accounts?.some((a: Account) => a.id === user.default_account_id) ? user.default_account_id : null),
         merchant_name: billRes.merchant_name || '',
         is_autopay: billRes.is_autopay,
         reminder_days_before: billRes.reminder_days_before,

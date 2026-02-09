@@ -13,6 +13,7 @@ import * as z from 'zod'
 import { budgetsApi, categoriesApi, accountsApi } from '@/lib/api'
 import type { Account, Category } from '@/types'
 import { BillFrequency, CategoryType } from '@/types'
+import { useAuth } from '@/components/providers/auth-provider'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -40,13 +41,16 @@ type BillFormData = z.infer<typeof billSchema>
 
 export default function NewBillPage() {
   const router = useRouter()
+  const { user } = useAuth()
   const [categories, setCategories] = useState<Category[]>([])
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loadingLookups, setLoadingLookups] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const [prefilled, setPrefilled] = useState(false)
 
   const form = useForm<BillFormData>({
-    resolver: zodResolver(billSchema),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(billSchema) as any,
     defaultValues: {
       frequency: BillFrequency.MONTHLY,
       due_date: new Date().getDate(),
@@ -73,6 +77,12 @@ export default function NewBillPage() {
       ])
       setCategories(categoriesRes.categories)
       setAccounts(accountsRes.accounts || [])
+
+      // Pre-fill from user's default payment account
+      if (user?.default_account_id && accountsRes.accounts?.some((a: Account) => a.id === user.default_account_id)) {
+        form.setValue('account_id', user.default_account_id)
+        setPrefilled(true)
+      }
     } catch (error) {
       console.error('Failed to load categories/accounts:', error)
       toast.error('Failed to load form data')
@@ -295,6 +305,11 @@ export default function NewBillPage() {
                         ))}
                       </SelectContent>
                     </Select>
+                    {prefilled && field.value && field.value !== 'none' && field.value === user?.default_account_id && (
+                      <FormDescription className="text-xs text-blue-600 dark:text-blue-400">
+                        Pre-filled from your default payment account
+                      </FormDescription>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}

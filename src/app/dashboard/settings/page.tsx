@@ -2,82 +2,95 @@
 
 /**
  * Settings Page
- * User profile and application settings
+ * Application settings (profile management moved to profile page)
  */
 
-import { useEffect, useRef, useState, type ChangeEvent } from 'react'
-import { useAuth } from '@/components/providers/auth-provider'
-import { User, Lock, Bell, Globe, Shield } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Lock, Bell, Globe, Shield, Wallet, Loader2, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { useAuth } from '@/components/providers/auth-provider'
 import { authAPI } from '@/lib/api/auth'
+import { accountsApi } from '@/lib/api'
+import { formatCurrency } from '@/lib/currency'
+import type { Account } from '@/types'
+import { AccountType } from '@/types'
 import { toast } from 'sonner'
+
+const ALLOWED_DEFAULT_TYPES: AccountType[] = [
+  AccountType.CHECKING,
+  AccountType.SAVINGS,
+  AccountType.CASH,
+  AccountType.CREDIT_CARD,
+]
+
+const accountTypeLabel: Record<string, string> = {
+  checking: 'Checking',
+  savings: 'Savings',
+  cash: 'Cash',
+  credit_card: 'Credit Card',
+}
 
 export default function SettingsPage() {
   const { user, refreshUser } = useAuth()
-  const [loading, setLoading] = useState(false)
-  const [avatarFile, setAvatarFile] = useState<File | null>(null)
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
-  const [avatarUploading, setAvatarUploading] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [accounts, setAccounts] = useState<Account[]>([])
+  const [loadingAccounts, setLoadingAccounts] = useState(true)
+  const [settingDefault, setSettingDefault] = useState(false)
+  const [clearingDefault, setClearingDefault] = useState(false)
 
   useEffect(() => {
-    return () => {
-      if (avatarPreview) {
-        URL.revokeObjectURL(avatarPreview)
-      }
-    }
-  }, [avatarPreview])
+    loadAccounts()
+  }, [])
 
-  const resolveAvatarUrl = (avatarUrl?: string | null) => {
-    if (!avatarUrl) return ''
-    if (avatarUrl.startsWith('http')) return avatarUrl
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-    return `${baseUrl}${avatarUrl}`
-  }
-
-  const avatarSrc = avatarPreview || resolveAvatarUrl(user?.avatar_url)
-
-  const handleAvatarSelect = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) {
-      setAvatarFile(null)
-      setAvatarPreview(null)
-      return
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image size must be 5MB or less.')
-      return
-    }
-    if (avatarPreview) {
-      URL.revokeObjectURL(avatarPreview)
-    }
-    setAvatarFile(file)
-    setAvatarPreview(URL.createObjectURL(file))
-  }
-
-  const handleAvatarUpload = async () => {
-    if (!avatarFile) return
+  const loadAccounts = async () => {
     try {
-      setAvatarUploading(true)
-      await authAPI.uploadAvatar(avatarFile)
-      await refreshUser(true)
-      toast.success('Profile photo updated.')
-      setAvatarFile(null)
-      setAvatarPreview(null)
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ''
-      }
-    } catch (error: any) {
-      console.error('Failed to upload avatar:', error)
-      toast.error(error.response?.data?.detail || 'Failed to upload photo.')
+      setLoadingAccounts(true)
+      const res = await accountsApi.getAll()
+      setAccounts(res.accounts || [])
+    } catch {
+      toast.error('Failed to load accounts')
     } finally {
-      setAvatarUploading(false)
+      setLoadingAccounts(false)
+    }
+  }
+
+  const eligibleAccounts = accounts.filter(
+    (a) => a.is_active && ALLOWED_DEFAULT_TYPES.includes(a.account_type as AccountType)
+  )
+
+  const currentDefault = accounts.find((a) => a.id === user?.default_account_id)
+
+  const handleSetDefault = async (accountId: string) => {
+    if (accountId === 'none') return
+    try {
+      setSettingDefault(true)
+      await authAPI.setDefaultAccount(accountId)
+      await refreshUser(true)
+      toast.success('Default payment account updated')
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { detail?: string } } }
+      toast.error(err.response?.data?.detail || 'Failed to set default account')
+    } finally {
+      setSettingDefault(false)
+    }
+  }
+
+  const handleClearDefault = async () => {
+    try {
+      setClearingDefault(true)
+      await authAPI.clearDefaultAccount()
+      await refreshUser(true)
+      toast.success('Default payment account cleared')
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { detail?: string } } }
+      toast.error(err.response?.data?.detail || 'Failed to clear default account')
+    } finally {
+      setClearingDefault(false)
     }
   }
 
@@ -87,84 +100,9 @@ export default function SettingsPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
         <p className="text-muted-foreground mt-2">
-          Manage your account settings and preferences
+          Manage your account security and app preferences
         </p>
       </div>
-
-      {/* Profile Settings */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <User className="h-5 w-5" />
-            <CardTitle>Profile Information</CardTitle>
-          </div>
-          <CardDescription>
-            Update your personal information and email address
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap items-center gap-4">
-            <Avatar className="h-16 w-16">
-              {avatarSrc ? <AvatarImage src={avatarSrc} alt={user?.full_name || 'User'} /> : null}
-              <AvatarFallback className="text-lg">
-                {user?.full_name?.charAt(0).toUpperCase() || 'U'}
-              </AvatarFallback>
-            </Avatar>
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  Upload photo
-                </Button>
-                {avatarFile && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={handleAvatarUpload}
-                    disabled={avatarUploading}
-                  >
-                    {avatarUploading ? 'Uploading...' : 'Save photo'}
-                  </Button>
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                JPG, PNG, WEBP, or GIF. Max 5MB.
-              </p>
-              <Input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleAvatarSelect}
-              />
-            </div>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="full_name">Full Name</Label>
-              <Input
-                id="full_name"
-                defaultValue={user?.full_name || ''}
-                placeholder="Enter your full name"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
-              <Input
-                id="email"
-                type="email"
-                defaultValue={user?.email || ''}
-                placeholder="Enter your email"
-              />
-            </div>
-          </div>
-          <Button>Save Changes</Button>
-        </CardContent>
-      </Card>
 
       {/* Security Settings */}
       <Card>
@@ -205,6 +143,93 @@ export default function SettingsPage() {
             </div>
           </div>
           <Button>Change Password</Button>
+        </CardContent>
+      </Card>
+
+      {/* Default Payment Account */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Wallet className="h-5 w-5" />
+            <CardTitle>Default Payment Account</CardTitle>
+          </div>
+          <CardDescription>
+            Choose a default account for bill payments and goal contributions.
+            This will be used when no specific account is selected.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {loadingAccounts ? (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Loading accounts...
+            </div>
+          ) : (
+            <>
+              {currentDefault && (
+                <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/50">
+                  <div>
+                    <p className="font-medium">{currentDefault.account_name}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant="outline" className="text-xs">
+                        {accountTypeLabel[currentDefault.account_type] || currentDefault.account_type}
+                      </Badge>
+                      <span className="text-sm text-muted-foreground">
+                        {formatCurrency(currentDefault.current_balance)}
+                      </span>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleClearDefault}
+                    disabled={clearingDefault}
+                    title="Remove default account"
+                  >
+                    {clearingDefault ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <X className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              )}
+
+              {eligibleAccounts.length > 0 ? (
+                <div className="space-y-2">
+                  <Label>{currentDefault ? 'Change default account' : 'Select default account'}</Label>
+                  <Select
+                    onValueChange={handleSetDefault}
+                    disabled={settingDefault}
+                    value=""
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={
+                        settingDefault
+                          ? 'Updating...'
+                          : currentDefault
+                            ? 'Change to a different account...'
+                            : 'Select an account...'
+                      } />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {eligibleAccounts
+                        .filter((a) => a.id !== user?.default_account_id)
+                        .map((account) => (
+                          <SelectItem key={account.id} value={account.id}>
+                            {account.account_name} ({accountTypeLabel[account.account_type] || account.account_type}) — {formatCurrency(account.current_balance)}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No eligible accounts found. Create a checking, savings, cash, or credit card account first.
+                </p>
+              )}
+            </>
+          )}
         </CardContent>
       </Card>
 

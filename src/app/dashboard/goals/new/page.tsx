@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/select'
 import { ArrowLeft, Loader2, Save, Target } from 'lucide-react'
 import { toast } from 'sonner'
+import { useAuth } from '@/components/providers/auth-provider'
 
 const goalSchema = z.object({
   goal_name: z.string().min(1, 'Goal name is required').max(100, 'Goal name is too long'),
@@ -52,6 +53,7 @@ type GoalFormData = z.infer<typeof goalSchema>
 
 export default function NewGoalPage() {
   const router = useRouter()
+  const { user } = useAuth()
   const [submitting, setSubmitting] = useState(false)
   const [accounts, setAccounts] = useState<Account[]>([])
   const [loadingAccounts, setLoadingAccounts] = useState(true)
@@ -81,6 +83,11 @@ export default function NewGoalPage() {
     try {
       const response = await accountsApi.getAll()
       setAccounts(response.accounts)
+
+      // Pre-fill from user's default payment account
+      if (user?.default_account_id && response.accounts.some((a: Account) => a.id === user.default_account_id)) {
+        setValue('account_id', user.default_account_id)
+      }
     } catch (error) {
       console.error('Failed to load accounts:', error)
     } finally {
