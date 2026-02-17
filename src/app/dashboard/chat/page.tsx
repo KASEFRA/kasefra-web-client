@@ -6,7 +6,8 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Bot, PanelLeft, Loader2 } from 'lucide-react'
+import Image from 'next/image'
+import { ArrowDown, Bot, PanelLeft } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/button'
@@ -18,6 +19,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 import {
   ChatMessageBubble,
@@ -26,6 +28,7 @@ import {
   ChatWelcome,
 } from '@/components/chat'
 import { aiChatApi } from '@/lib/api'
+import { cn } from '@/lib/utils'
 import type { ChatMessage, ChatSession, SSEEvent } from '@/types/chat'
 
 // Message type used locally (extends backend type with streaming state)
@@ -37,6 +40,8 @@ interface DisplayMessage {
   isStreaming?: boolean
 }
 
+const SCROLL_BOTTOM_THRESHOLD = 96
+
 export default function ChatPage() {
   // ── State ─────────────────────────────────────────────────
   const [sessions, setSessions] = useState<ChatSession[]>([])
@@ -47,24 +52,96 @@ export default function ChatPage() {
   const [, setIsLoadingSessions] = useState(true)
   const [isLoadingMessages, setIsLoadingMessages] = useState(false)
   const [showSidebar, setShowSidebar] = useState(false)
+  const [isAtBottom, setIsAtBottom] = useState(true)
+
+  const hasMessages = messages.length > 0
+  const activeSessionTitle = activeSessionId
+    ? sessions.find((s) => s.id === activeSessionId)?.title || 'Loky AI'
+    : 'New Conversation'
 
   // Refs
   const abortControllerRef = useRef<AbortController | null>(null)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const scrollAreaRef = useRef<HTMLDivElement>(null)
+  const messagesScrollRootRef = useRef<HTMLDivElement | null>(null)
 
   // ── Auto-scroll ───────────────────────────────────────────
 
-  const scrollToBottom = useCallback(() => {
-    // Small delay to let DOM update
-    setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-    }, 50)
+  const getMessagesViewport = useCallback(() => {
+    return (
+      messagesScrollRootRef.current?.querySelector<HTMLDivElement>(
+        '[data-slot="scroll-area-viewport"]',
+      ) || null
+    )
   }, [])
 
+  const isViewportNearBottom = useCallback((viewport: HTMLDivElement) => {
+    const distanceFromBottom =
+      viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight
+    return distanceFromBottom <= SCROLL_BOTTOM_THRESHOLD
+  }, [])
+
+  const updateIsAtBottom = useCallback(() => {
+    const viewport = getMessagesViewport()
+    if (!viewport) {
+      setIsAtBottom(true)
+      return
+    }
+    setIsAtBottom(isViewportNearBottom(viewport))
+  }, [getMessagesViewport, isViewportNearBottom])
+
+  const scrollMessagesToBottom = useCallback(
+    (behavior: ScrollBehavior = 'smooth') => {
+      const viewport = getMessagesViewport()
+      if (!viewport) return
+
+      viewport.scrollTo({
+        top: viewport.scrollHeight,
+        behavior,
+      })
+      setIsAtBottom(true)
+    },
+    [getMessagesViewport],
+  )
+
   useEffect(() => {
-    scrollToBottom()
-  }, [messages, scrollToBottom])
+    if (!hasMessages) {
+      setIsAtBottom(true)
+      return
+    }
+
+    const viewport = getMessagesViewport()
+    if (!viewport) return
+
+    const handleScroll = () => {
+      setIsAtBottom(isViewportNearBottom(viewport))
+    }
+
+    handleScroll()
+    viewport.addEventListener('scroll', handleScroll, { passive: true })
+    window.addEventListener('resize', handleScroll)
+
+    return () => {
+      viewport.removeEventListener('scroll', handleScroll)
+      window.removeEventListener('resize', handleScroll)
+    }
+  }, [getMessagesViewport, hasMessages, isViewportNearBottom])
+
+  useEffect(() => {
+    if (!hasMessages) return
+
+    if (isAtBottom) {
+      scrollMessagesToBottom(isLoading ? 'auto' : 'smooth')
+      return
+    }
+
+    updateIsAtBottom()
+  }, [
+    hasMessages,
+    isAtBottom,
+    isLoading,
+    messages,
+    scrollMessagesToBottom,
+    updateIsAtBottom,
+  ])
 
   // ── Load sessions on mount ────────────────────────────────
 
@@ -100,6 +177,7 @@ export default function ChatPage() {
         }))
       setMessages(displayMessages)
       setActiveSessionId(sessionId)
+      setIsAtBottom(true)
     } catch (error) {
       console.error('Failed to load session messages:', error)
       toast.error('Failed to load conversation')
@@ -126,7 +204,41 @@ export default function ChatPage() {
     setMessages([])
     setInputValue('')
     setShowSidebar(false)
+    setIsAtBottom(true)
   }, [])
+
+  // ── Keyboard shortcuts ────────────────────────────────────
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd/Ctrl + K - Focus input
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        const textarea = document.querySelector('textarea')
+        if (textarea) {
+          textarea.focus()
+        }
+      }
+
+      // Cmd/Ctrl + N - New chat
+      if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
+        e.preventDefault()
+        handleNewChat()
+      }
+
+      // Esc - Clear input
+      if (e.key === 'Escape') {
+        const textarea = document.querySelector('textarea')
+        if (textarea && document.activeElement === textarea && !inputValue) {
+          textarea.blur()
+        } else if (inputValue) {
+          setInputValue('')
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [handleNewChat, inputValue])
 
   // ── Core streaming function (shared by handleSend & handleWelcomePrompt) ──
 
@@ -152,6 +264,9 @@ export default function ChatPage() {
       } else {
         setMessages((prev) => [...prev, userMsg, assistantMsg])
       }
+      requestAnimationFrame(() => {
+        scrollMessagesToBottom('smooth')
+      })
 
       const abortController = new AbortController()
       abortControllerRef.current = abortController
@@ -274,7 +389,7 @@ export default function ChatPage() {
         abortControllerRef.current = null
       }
     },
-    [loadSessions],
+    [loadSessions, scrollMessagesToBottom],
   )
 
   // ── Send message (streaming) ──────────────────────────────
@@ -337,24 +452,10 @@ export default function ChatPage() {
 
   // ── Render ────────────────────────────────────────────────
 
-  const hasMessages = messages.length > 0
-
   return (
-    <div className="flex h-[calc(100vh-5rem)] -m-4 md:-m-6 lg:-m-8">
-      {/* Desktop sidebar for sessions */}
-      <div className="hidden lg:flex w-72 flex-col border-r bg-card/50">
-        <ChatSessionList
-          sessions={sessions}
-          activeSessionId={activeSessionId}
-          onSelectSession={handleSelectSession}
-          onNewChat={handleNewChat}
-          onRenameSession={handleRenameSession}
-          onDeleteSession={handleDeleteSession}
-        />
-      </div>
-
+    <div className="flex h-full min-h-0 overflow-hidden">
       {/* Main chat area */}
-      <div className="flex flex-1 flex-col min-w-0">
+      <div className="flex min-h-0 flex-1 flex-col min-w-0 order-1 overflow-hidden">
         {/* Chat header */}
         <div className="flex items-center gap-2 border-b px-4 py-3 bg-card/50">
           {/* Mobile session panel trigger */}
@@ -369,7 +470,7 @@ export default function ChatPage() {
                 <span className="sr-only">Chat history</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-72 p-0">
+            <SheetContent side="right" className="w-72 p-0">
               <SheetHeader className="sr-only">
                 <SheetTitle>Chat History</SheetTitle>
               </SheetHeader>
@@ -386,56 +487,110 @@ export default function ChatPage() {
 
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <Bot className="h-5 w-5 text-primary flex-shrink-0" />
-            <h1 className="font-semibold truncate">
-              {activeSessionId
-                ? sessions.find((s) => s.id === activeSessionId)?.title ||
-                  'AI Chat'
-                : 'New Conversation'}
-            </h1>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <h1
+                  className="flex-1 min-w-0 truncate text-sm font-semibold leading-6"
+                  title={activeSessionTitle}
+                >
+                  {activeSessionTitle}
+                </h1>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" align="start" className="max-w-xs break-words">
+                {activeSessionTitle}
+              </TooltipContent>
+            </Tooltip>
           </div>
-
-          {/* New chat button (desktop) */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleNewChat}
-            className="hidden lg:flex gap-1.5 text-xs"
-            disabled={!hasMessages}
-          >
-            New Chat
-          </Button>
         </div>
 
         {/* Messages area */}
-        <div className="flex-1 overflow-hidden">
+        <div className="relative min-h-0 flex-1 overflow-hidden">
           {isLoadingMessages ? (
-            <div className="flex items-center justify-center h-full">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            <div className="flex flex-col gap-4 p-4 max-w-3xl mx-auto animate-pulse">
+              {/* Message skeletons */}
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    'flex gap-3',
+                    i % 2 === 0 ? 'justify-start' : 'justify-end'
+                  )}
+                >
+                  {i % 2 === 0 && <div className="h-8 w-8 rounded-full bg-muted flex-shrink-0" />}
+                  <div
+                    className={cn(
+                      'h-20 rounded-2xl bg-muted',
+                      i % 2 === 0 ? 'w-2/3' : 'w-1/2'
+                    )}
+                  />
+                  {i % 2 !== 0 && <div className="h-8 w-8 rounded-full bg-muted flex-shrink-0" />}
+                </div>
+              ))}
             </div>
           ) : !hasMessages ? (
             <ScrollArea className="h-full">
               <ChatWelcome onSendPrompt={handleWelcomePrompt} />
             </ScrollArea>
           ) : (
-            <ScrollArea className="h-full" ref={scrollAreaRef}>
-              <div className="flex flex-col gap-4 p-4 pb-2 max-w-3xl mx-auto">
-                {messages.map((msg) => (
-                  <ChatMessageBubble
-                    key={msg.id}
-                    role={msg.role}
-                    content={msg.content}
-                    toolsUsed={msg.toolsUsed}
-                    isStreaming={msg.isStreaming}
-                  />
-                ))}
-                <div ref={messagesEndRef} />
-              </div>
-            </ScrollArea>
+            <div ref={messagesScrollRootRef} className="h-full">
+              <ScrollArea className="h-full">
+                <div className="flex flex-col gap-4 p-4 pb-2 max-w-3xl mx-auto">
+                  {messages.map((msg) => (
+                    <ChatMessageBubble
+                      key={msg.id}
+                      role={msg.role}
+                      content={msg.content}
+                      toolsUsed={msg.toolsUsed}
+                      isStreaming={msg.isStreaming}
+                    />
+                  ))}
+
+                  {/* Typing indicator */}
+                  {isLoading && messages.length > 0 && messages[messages.length - 1]?.role === 'user' && (
+                    <div className="flex gap-3 animate-fade-in-up">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 overflow-hidden flex-shrink-0">
+                        <Image
+                          src="/loky.png"
+                          alt="Loky AI"
+                          width={28}
+                          height={28}
+                          className="object-cover"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <span>Loky is thinking</span>
+                        <div className="flex gap-1">
+                          <div className="h-1.5 w-1.5 rounded-full bg-primary/60 animate-bounce [animation-delay:-0.3s]" />
+                          <div className="h-1.5 w-1.5 rounded-full bg-primary/60 animate-bounce [animation-delay:-0.15s]" />
+                          <div className="h-1.5 w-1.5 rounded-full bg-primary/60 animate-bounce" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
+          )}
+
+          {hasMessages && !isLoadingMessages && !isAtBottom && (
+            <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center">
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={() => scrollMessagesToBottom('smooth')}
+                aria-label="Jump to latest message"
+                className="pointer-events-auto h-8 rounded-full border bg-background/95 px-3 shadow-sm backdrop-blur"
+              >
+                <ArrowDown className="h-3.5 w-3.5 mr-1.5" />
+                Jump to latest
+              </Button>
+            </div>
           )}
         </div>
 
         {/* Input area */}
-        <div className="border-t bg-card/50 px-4 py-3">
+        <div className="border-t bg-card/50 px-4 py-2">
           <div className="max-w-3xl mx-auto">
             <ChatInput
               value={inputValue}
@@ -444,11 +599,20 @@ export default function ChatPage() {
               onStop={handleStop}
               isLoading={isLoading}
             />
-            <p className="text-[10px] text-muted-foreground/50 text-center mt-2">
-              AI responses may not always be accurate. Always verify important financial information.
-            </p>
           </div>
         </div>
+      </div>
+
+      {/* Desktop sidebar for sessions - moved to right */}
+      <div className="hidden lg:flex w-72 min-h-0 flex-col border-l bg-card/50 order-2 overflow-hidden">
+        <ChatSessionList
+          sessions={sessions}
+          activeSessionId={activeSessionId}
+          onSelectSession={handleSelectSession}
+          onNewChat={handleNewChat}
+          onRenameSession={handleRenameSession}
+          onDeleteSession={handleDeleteSession}
+        />
       </div>
     </div>
   )

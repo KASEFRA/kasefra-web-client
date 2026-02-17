@@ -1,12 +1,12 @@
 /**
  * Chat welcome screen.
- * Shown when no messages exist — provides starter prompts.
+ * Shown when no messages exist — provides compact starter prompts.
  */
 
 'use client'
 
+import Image from 'next/image'
 import {
-  Bot,
   TrendingUp,
   PieChart,
   Target,
@@ -21,63 +21,63 @@ interface ChatWelcomeProps {
 const starterPrompts = [
   {
     icon: Wallet,
-    label: 'Account Overview',
+    label: 'Account overview',
     prompt: 'Give me an overview of all my accounts and their balances.',
   },
   {
     icon: ArrowRightLeft,
-    label: 'Recent Spending',
+    label: 'Recent spending',
     prompt: 'What have I spent money on this month?',
   },
   {
     icon: PieChart,
-    label: 'Budget Check',
+    label: 'Budget check',
     prompt: "How am I doing on my budgets? Am I over budget anywhere?",
   },
   {
     icon: Target,
-    label: 'Goal Progress',
+    label: 'Goal progress',
     prompt: 'How close am I to reaching my savings goals?',
   },
   {
     icon: TrendingUp,
-    label: 'Net Worth',
+    label: 'Net worth trend',
     prompt: "What's my current net worth and how has it changed recently?",
   },
 ]
 
 export function ChatWelcome({ onSendPrompt }: ChatWelcomeProps) {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center px-4 py-12">
-      {/* AI Icon */}
-      <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-        <Bot className="h-8 w-8" />
+    <div className="flex flex-1 flex-col items-center justify-center px-4 py-8">
+      {/* Logo */}
+      <div className="mb-4">
+        <Image
+          src="/loky.png"
+          alt="Loky AI"
+          width={80}
+          height={80}
+          className="rounded-2xl shadow-lg"
+        />
       </div>
 
-      {/* Welcome text */}
-      <h2 className="text-xl font-semibold mb-2">Kasefra AI Assistant</h2>
-      <p className="text-sm text-muted-foreground text-center max-w-md mb-8">
-        Ask me anything about your finances. I can analyze your accounts,
-        transactions, budgets, goals, and more.
+      {/* Heading */}
+      <h2 className="text-2xl font-semibold mb-1 text-foreground">
+        Loky AI
+      </h2>
+      <p className="text-sm text-muted-foreground mb-8">
+        How can I help you today?
       </p>
 
-      {/* Starter prompts */}
-      <div className="grid gap-2 w-full max-w-lg">
+      {/* Compact starter prompts — 2-column grid of pills */}
+      <div className="grid grid-cols-2 gap-2 w-full max-w-md">
         {starterPrompts.map((item) => (
           <button
             key={item.label}
             onClick={() => onSendPrompt(item.prompt)}
-            className="flex items-center gap-3 rounded-xl border bg-card px-4 py-3 text-left text-sm transition-colors hover:bg-muted group"
+            className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5 text-left text-xs transition-colors hover:bg-accent hover:border-primary/30"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-              <item.icon className="h-4 w-4" />
-            </div>
-            <div>
-              <p className="font-medium">{item.label}</p>
-              <p className="text-xs text-muted-foreground line-clamp-1">
-                {item.prompt}
-              </p>
-            </div>
+            <item.icon className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+            <span className="truncate">{item.label}</span>
           </button>
         ))}
       </div>

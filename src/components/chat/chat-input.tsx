@@ -27,7 +27,7 @@ export function ChatInput({
   onStop,
   isLoading = false,
   disabled = false,
-  placeholder = 'Ask Kasefra AI anything about your finances...',
+  placeholder = 'Ask Loky AI anything about your finances...',
 }: ChatInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -57,7 +57,7 @@ export function ChatInput({
   const canSend = value.trim().length > 0 && !isLoading && !disabled
 
   return (
-    <div className="relative flex items-end gap-2 rounded-2xl border bg-background px-3 py-2 shadow-sm focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/50 transition-all">
+    <div className="relative flex items-end gap-2 rounded-2xl border-2 bg-background px-4 py-3 shadow-sm focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
       <textarea
         ref={textareaRef}
         value={value}
@@ -68,19 +68,25 @@ export function ChatInput({
         rows={1}
         className={cn(
           'flex-1 resize-none bg-transparent text-sm leading-relaxed',
-          'placeholder:text-muted-foreground/60',
+          'placeholder:text-muted-foreground/50',
           'focus:outline-none',
           'disabled:opacity-50 disabled:cursor-not-allowed',
-          'min-h-[24px] max-h-[200px] py-1',
+          'min-h-[28px] max-h-[200px] py-1.5',
         )}
       />
+
+      {value.length > 200 && (
+        <span className="absolute bottom-1 right-14 text-xs text-muted-foreground">
+          {value.length}
+        </span>
+      )}
 
       {isLoading ? (
         <Button
           size="icon"
           variant="ghost"
           onClick={onStop}
-          className="h-8 w-8 shrink-0 rounded-xl text-destructive hover:text-destructive hover:bg-destructive/10"
+          className="h-9 w-9 shrink-0 rounded-xl text-destructive hover:text-destructive hover:bg-destructive/10"
         >
           <Square className="h-4 w-4 fill-current" />
           <span className="sr-only">Stop generating</span>
@@ -90,7 +96,10 @@ export function ChatInput({
           size="icon"
           onClick={onSend}
           disabled={!canSend}
-          className="h-8 w-8 shrink-0 rounded-xl"
+          className={cn(
+            'h-9 w-9 shrink-0 rounded-xl transition-all',
+            canSend && 'shadow-sm hover:shadow-md hover:scale-105'
+          )}
         >
           <SendHorizontal className="h-4 w-4" />
           <span className="sr-only">Send message</span>

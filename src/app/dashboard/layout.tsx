@@ -6,12 +6,13 @@
  */
 
 import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/components/providers/auth-provider'
 import { AppSidebar } from '@/components/dashboard/app-sidebar'
 import { SiteHeader } from '@/components/dashboard/site-header'
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar'
 import { Toaster } from '@/components/ui/sonner'
+import { cn } from '@/lib/utils'
 
 export default function DashboardLayout({
   children,
@@ -20,6 +21,8 @@ export default function DashboardLayout({
 }) {
   const { user, loading } = useAuth()
   const router = useRouter()
+  const pathname = usePathname()
+  const isChatRoute = pathname?.startsWith('/dashboard/chat')
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -48,9 +51,14 @@ export default function DashboardLayout({
   return (
     <SidebarProvider defaultOpen={true}>
       <AppSidebar />
-      <SidebarInset>
+      <SidebarInset className="flex flex-col h-screen">
         <SiteHeader />
-        <main className="flex-1 p-4 md:p-6 lg:p-8">
+        <main
+          className={cn(
+            'flex-1',
+            isChatRoute ? 'overflow-hidden' : 'p-4 md:p-6 lg:p-8 overflow-auto',
+          )}
+        >
           {children}
         </main>
       </SidebarInset>

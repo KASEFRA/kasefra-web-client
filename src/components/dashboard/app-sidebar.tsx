@@ -129,7 +129,7 @@ const navMainItems = [
     icon: FileText,
   },
   {
-    title: "AI Chat",
+    title: "Loky AI",
     url: "/dashboard/chat",
     icon: Bot,
   },
