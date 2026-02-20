@@ -1,4 +1,6 @@
 export { ChatMessageBubble } from './chat-message-bubble'
+export { ChatConfirmationCard } from './chat-confirmation-card'
 export { ChatInput } from './chat-input'
 export { ChatSessionList } from './chat-session-list'
 export { ChatWelcome } from './chat-welcome'
+export { VoiceInputButton } from './voice-input-button'

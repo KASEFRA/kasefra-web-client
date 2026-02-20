@@ -9,6 +9,7 @@ import { useRef, useEffect, KeyboardEvent } from 'react'
 import { SendHorizontal, Square } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { VoiceInputButton } from './voice-input-button'
 
 interface ChatInputProps {
   value: string
@@ -58,6 +59,10 @@ export function ChatInput({
 
   return (
     <div className="relative flex items-end gap-2 rounded-2xl border-2 bg-background px-4 py-3 shadow-sm focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
+      <VoiceInputButton
+        onTranscript={(text) => onChange(text)}
+        disabled={isLoading || disabled}
+      />
       <textarea
         ref={textareaRef}
         value={value}

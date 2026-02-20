@@ -29,7 +29,7 @@ import {
 } from '@/components/chat'
 import { aiChatApi } from '@/lib/api'
 import { cn } from '@/lib/utils'
-import type { ChatMessage, ChatSession, SSEEvent } from '@/types/chat'
+import type { ChatMessage, ChatSession, PendingConfirmation, SSEEvent } from '@/types/chat'
 
 // Message type used locally (extends backend type with streaming state)
 interface DisplayMessage {
@@ -38,6 +38,7 @@ interface DisplayMessage {
   content: string | null
   toolsUsed?: string[]
   isStreaming?: boolean
+  confirmation?: PendingConfirmation
 }
 
 const SCROLL_BOTTOM_THRESHOLD = 96
@@ -336,6 +337,29 @@ export default function ChatPage() {
               })
               break
 
+            case 'confirmation_required': {
+              const confirmData = sseEvent.data
+              setMessages((prev) => {
+                const updated = [...prev]
+                const lastIdx = updated.length - 1
+                if (updated[lastIdx]?.role === 'assistant') {
+                  updated[lastIdx] = {
+                    ...updated[lastIdx],
+                    isStreaming: false,
+                    confirmation: {
+                      actionId: confirmData.action_id,
+                      actionType: confirmData.action_type,
+                      summary: confirmData.summary,
+                      details: confirmData.details,
+                      status: 'pending',
+                    },
+                  }
+                }
+                return updated
+              })
+              break
+            }
+
             case 'error':
               toast.error(sseEvent.data.error || 'An error occurred')
               setMessages((prev) => {
@@ -414,6 +438,92 @@ export default function ChatPage() {
       void streamChat(prompt, null, [])
     },
     [streamChat],
+  )
+
+  // ── Confirm / Cancel pending write actions ────────────────
+
+  const handleConfirm = useCallback(
+    async (actionId: string, messageId: string) => {
+      if (!activeSessionId) return
+
+      // Transition card to "confirming" state immediately
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageId && m.confirmation
+            ? { ...m, confirmation: { ...m.confirmation, status: 'confirming' as const } }
+            : m,
+        ),
+      )
+
+      try {
+        for await (const event of aiChatApi.confirmAction(actionId, true, activeSessionId)) {
+          if (event.type === 'action_result') {
+            // Mark the confirmation card as executed
+            setMessages((prev) => {
+              const updated = prev.map((m) =>
+                m.id === messageId && m.confirmation
+                  ? { ...m, confirmation: { ...m.confirmation, status: 'executed' as const } }
+                  : m,
+              )
+              // Append result as a follow-up assistant message
+              const resultMsg: DisplayMessage = {
+                id: `result-${Date.now()}`,
+                role: 'assistant',
+                content: event.data.message,
+              }
+              return [...updated, resultMsg]
+            })
+          } else if (event.type === 'error') {
+            toast.error(event.data.error || 'Action failed')
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === messageId && m.confirmation
+                  ? { ...m, confirmation: { ...m.confirmation, status: 'pending' as const } }
+                  : m,
+              ),
+            )
+          }
+        }
+      } catch {
+        toast.error('Failed to confirm action. Please try again.')
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === messageId && m.confirmation
+              ? { ...m, confirmation: { ...m.confirmation, status: 'pending' as const } }
+              : m,
+          ),
+        )
+      }
+    },
+    [activeSessionId],
+  )
+
+  const handleCancel = useCallback(
+    async (actionId: string, messageId: string) => {
+      if (!activeSessionId) return
+
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageId && m.confirmation
+            ? { ...m, confirmation: { ...m.confirmation, status: 'cancelled' as const } }
+            : m,
+        ),
+      )
+
+      try {
+        // Consume the SSE stream so the backend receives the request
+        // and cleans up the pending action. No UI updates needed — the
+        // card is already showing "cancelled".
+        const gen = aiChatApi.confirmAction(actionId, false, activeSessionId)
+        let next = await gen.next()
+        while (!next.done) {
+          next = await gen.next()
+        }
+      } catch {
+        // Cancellation failures are non-critical — card already shows cancelled
+      }
+    },
+    [activeSessionId],
   )
 
   // ── Session management handlers ───────────────────────────
@@ -542,6 +652,17 @@ export default function ChatPage() {
                       content={msg.content}
                       toolsUsed={msg.toolsUsed}
                       isStreaming={msg.isStreaming}
+                      confirmation={msg.confirmation}
+                      onConfirm={
+                        msg.confirmation
+                          ? () => handleConfirm(msg.confirmation!.actionId, msg.id)
+                          : undefined
+                      }
+                      onCancel={
+                        msg.confirmation
+                          ? () => handleCancel(msg.confirmation!.actionId, msg.id)
+                          : undefined
+                      }
                     />
                   ))}
 

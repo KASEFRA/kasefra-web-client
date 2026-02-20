@@ -14,6 +14,48 @@ import type {
   SSEEvent,
 } from '@/types/chat'
 
+// Re-export SSE parser as an internal helper to avoid duplication
+async function* _parseSSEStream(
+  response: Response,
+): AsyncGenerator<SSEEvent> {
+  const reader = response.body?.getReader()
+  if (!reader) throw new Error('No response body')
+
+  const decoder = new TextDecoder()
+  let buffer = ''
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
+
+      let currentEvent = ''
+
+      for (const line of lines) {
+        if (line.startsWith('event: ')) {
+          currentEvent = line.slice(7).trim()
+        } else if (line.startsWith('data: ') && currentEvent) {
+          try {
+            const data = JSON.parse(line.slice(6))
+            yield { type: currentEvent, data } as SSEEvent
+          } catch {
+            // Skip malformed JSON
+          }
+          currentEvent = ''
+        } else if (line === '') {
+          currentEvent = ''
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock()
+  }
+}
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 const API_VERSION = process.env.NEXT_PUBLIC_API_VERSION || 'v1'
 
@@ -65,44 +107,45 @@ export async function* streamMessage(
     throw new Error(`Chat stream error (${response.status}): ${errorBody}`)
   }
 
-  const reader = response.body?.getReader()
-  if (!reader) throw new Error('No response body')
+  yield* _parseSSEStream(response)
+}
 
-  const decoder = new TextDecoder()
-  let buffer = ''
+/**
+ * Confirm or cancel a pending write action proposed by the AI.
+ *
+ * Yields SSE events:
+ *   - action_result → { action_id, success, message }
+ *   - error         → { error }
+ */
+export async function* confirmAction(
+  actionId: string,
+  confirmed: boolean,
+  sessionId: string,
+  signal?: AbortSignal,
+): AsyncGenerator<SSEEvent> {
+  const token = getAccessToken()
+  const url = `${API_URL}/api/${API_VERSION}/ai/chat/confirm`
 
-  try {
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({
+      action_id: actionId,
+      confirmed,
+      session_id: sessionId,
+    }),
+    signal,
+  })
 
-      buffer += decoder.decode(value, { stream: true })
-      const lines = buffer.split('\n')
-      // Keep the last potentially incomplete line in the buffer
-      buffer = lines.pop() || ''
-
-      let currentEvent = ''
-
-      for (const line of lines) {
-        if (line.startsWith('event: ')) {
-          currentEvent = line.slice(7).trim()
-        } else if (line.startsWith('data: ') && currentEvent) {
-          try {
-            const data = JSON.parse(line.slice(6))
-            yield { type: currentEvent, data } as SSEEvent
-          } catch {
-            // Skip malformed JSON
-          }
-          currentEvent = ''
-        } else if (line === '') {
-          // Empty line is SSE event separator
-          currentEvent = ''
-        }
-      }
-    }
-  } finally {
-    reader.releaseLock()
+  if (!response.ok) {
+    const errorBody = await response.text()
+    throw new Error(`Confirm action error (${response.status}): ${errorBody}`)
   }
+
+  yield* _parseSSEStream(response)
 }
 
 // ── Session Endpoints ───────────────────────────────────────────
@@ -152,6 +195,7 @@ export async function deleteSession(sessionId: string): Promise<void> {
 export const aiChatApi = {
   sendMessage,
   streamMessage,
+  confirmAction,
   getSessions,
   getSession,
   updateSession,

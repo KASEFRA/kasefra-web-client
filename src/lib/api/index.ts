@@ -15,6 +15,7 @@ export { goalsApi } from './goals'
 export { networthApi } from './networth'
 export { apiClient } from './client'
 export { aiChatApi } from './ai-chat'
+export { transcribeAudio } from './audio'
 
 // Account type-specific detail APIs
 export { checkingApi } from './checking'

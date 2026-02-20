@@ -87,9 +87,36 @@ export interface SSEErrorEvent {
   error: string
 }
 
+export interface SSEConfirmationEvent {
+  action_id: string
+  action_type: string
+  summary: string
+  details: Record<string, string>
+}
+
+export interface SSEActionResultEvent {
+  action_id: string
+  success: boolean
+  message: string
+}
+
 export type SSEEvent =
   | { type: 'session'; data: SSESessionEvent }
   | { type: 'token'; data: SSETokenEvent }
   | { type: 'tool'; data: SSEToolEvent }
   | { type: 'done'; data: SSEDoneEvent }
   | { type: 'error'; data: SSEErrorEvent }
+  | { type: 'confirmation_required'; data: SSEConfirmationEvent }
+  | { type: 'action_result'; data: SSEActionResultEvent }
+
+// ===== Pending Confirmation (frontend UI state) =====
+
+export type ConfirmationStatus = 'pending' | 'confirming' | 'cancelled' | 'executed'
+
+export interface PendingConfirmation {
+  actionId: string
+  actionType: string
+  summary: string
+  details: Record<string, string>
+  status: ConfirmationStatus
+}
