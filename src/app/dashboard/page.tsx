@@ -7,7 +7,9 @@
 
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/components/providers/auth-provider'
-import { networthApi } from '@/lib/api'
+import { networthApi, healthScoreApi } from '@/lib/api'
+import type { HealthScoreResponse } from '@/lib/api/health-score'
+import { HealthScoreCard } from '@/components/health-score/health-score-card'
 import { formatCurrency } from '@/lib/currency'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -132,6 +134,7 @@ export default function DashboardPage() {
     netWorth: 0,
     accountsCount: 0,
   })
+  const [healthScore, setHealthScore] = useState<HealthScoreResponse | null>(null)
   const [widgetLayout, setWidgetLayout] = useState<DashboardWidgetLayout>(DEFAULT_LAYOUT)
   const [isCustomizing, setIsCustomizing] = useState(false)
   const [layoutReady, setLayoutReady] = useState(false)
@@ -164,8 +167,12 @@ export default function DashboardPage() {
 
   const loadDashboardData = async () => {
     try {
-      // Fetch current net worth data from backend
-      const networth = await networthApi.getCurrent()
+      // Fetch net worth and health score in parallel
+      const [networth, score] = await Promise.all([
+        networthApi.getCurrent(),
+        healthScoreApi.get().catch(() => null),
+      ])
+      setHealthScore(score)
       setStats({
         liquidAssets: networth.liquid_assets,
         totalAssets: networth.total_assets,
@@ -333,6 +340,9 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Financial Health Score */}
+      <HealthScoreCard data={healthScore} loading={loading} />
 
       {/* Quick Actions */}
 

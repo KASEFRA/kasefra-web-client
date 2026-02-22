@@ -36,3 +36,5 @@ export const billsApi = {
   getUpcoming: budgetsApi.getUpcomingBills,
   markPaid: budgetsApi.markBillPaid,
 }
+export { healthScoreApi } from './health-score'
+export type { HealthScoreResponse, DimensionScore } from './health-score'

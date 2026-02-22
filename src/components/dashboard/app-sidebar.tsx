@@ -21,6 +21,7 @@ import {
   Banknote,
   CircleDollarSign,
   Bot,
+  Shield,
 } from "lucide-react"
 
 import {
@@ -122,6 +123,11 @@ const navMainItems = [
     title: "Net Worth",
     url: "/dashboard/networth",
     icon: Briefcase,
+  },
+  {
+    title: "Health Score",
+    url: "/dashboard/health-score",
+    icon: Shield,
   },
   {
     title: "Reports",
